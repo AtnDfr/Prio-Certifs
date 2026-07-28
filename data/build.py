@@ -33,9 +33,12 @@ from pathlib import Path
 
 import openpyxl
 
+import base64
+
 BASE_DIR = Path(__file__).parent
 SOURCE_XLSX = BASE_DIR / "source_certifications.xlsx"
 TEMPLATE_HTML = BASE_DIR / "app_template.html"
+LOGO_PNG = BASE_DIR / "wavestone-logo.png"
 OUTPUT_HTML = BASE_DIR.parent / "index.html"
 
 MANUAL_OVERRIDES = {
@@ -170,7 +173,10 @@ def main():
     template = TEMPLATE_HTML.read_text(encoding="utf-8")
     if "/*__APP_DATA__*/" not in template:
         raise ValueError("Placeholder /*__APP_DATA__*/ introuvable dans le template.")
-    output = template.replace("/*__APP_DATA__*/", safe_json)
+    if "/*__LOGO_DATA_URI__*/" not in template:
+        raise ValueError("Placeholder /*__LOGO_DATA_URI__*/ introuvable dans le template.")
+    logo_b64 = base64.b64encode(LOGO_PNG.read_bytes()).decode("ascii")
+    output = template.replace("/*__APP_DATA__*/", safe_json).replace("/*__LOGO_DATA_URI__*/", logo_b64)
     OUTPUT_HTML.write_text(output, encoding="utf-8")
     print(f"-> {OUTPUT_HTML} ({len(output)} octets)")
 
