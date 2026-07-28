@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prio Certifs — Wavestone</title>
 <script id="app-data" type="application/json">/*__APP_DATA__*/</script>
+<script id="provider-logos" type="application/json">/*__PROVIDER_LOGOS__*/</script>
+<script id="default-logo" type="text/plain">/*__DEFAULT_LOGO__*/</script>
 <script id="frozen-flag" type="application/json">false</script>
 <script id="frozen-state" type="application/json">null</script>
 <style>
@@ -94,12 +96,6 @@ button, input, select, textarea{ font-family: inherit; }
 .brand-text h1{ font-size:16px; margin:0; font-weight:700; line-height:1.2;}
 .brand-text p{ margin:0; font-size:12px; color:var(--text-muted); }
 .top-actions{ display:flex; align-items:center; gap:8px; }
-.icon-btn{
-  border:1px solid var(--border-strong); background:var(--surface-1); color:var(--text-secondary);
-  width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;
-  cursor:pointer; font-size:16px;
-}
-.icon-btn:hover{ background:var(--surface-2); }
 .btn{
   border:1px solid var(--border-strong); background:var(--surface-1); color:var(--text-primary);
   padding:9px 14px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;
@@ -185,8 +181,9 @@ h2.section-title{ font-size:15px; font-weight:700; margin: 0 0 12px; }
 }
 .pill-row{ display:flex; gap:6px; flex-wrap:wrap; }
 .pill{
-  padding:6px 12px; border-radius:999px; border:1px solid var(--border-strong); background:var(--surface-1);
+  padding:6px 12px 6px 6px; border-radius:999px; border:1px solid var(--border-strong); background:var(--surface-1);
   font-size:12px; font-weight:600; cursor:pointer; color:var(--text-secondary); white-space:nowrap;
+  display:inline-flex; align-items:center; gap:7px;
 }
 .pill.active{ background:var(--text-primary); color:var(--surface-1); border-color:var(--text-primary); }
 
@@ -202,7 +199,6 @@ table.data-table{ width:100%; border-collapse:collapse; font-size:13px; }
 .data-table tbody tr:hover{ background:var(--surface-2); }
 .data-table tbody tr:last-child td{ border-bottom:none; }
 .cell-provider{ display:flex; align-items:center; gap:8px; font-weight:700; }
-.dot{ width:9px;height:9px;border-radius:50%;flex-shrink:0; }
 .muted{ color:var(--text-muted); font-style:italic; }
 .na{ color:var(--text-muted); }
 .num{ font-variant-numeric:tabular-nums; text-align:right; }
@@ -236,10 +232,15 @@ table.data-table{ width:100%; border-collapse:collapse; font-size:13px; }
 }
 :root[data-theme="dark"] .override-badge{ color: var(--cat-4); }
 
+.provider-badge{
+  display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+  border-radius:999px; border:1px solid var(--border); box-sizing:border-box;
+}
+.provider-badge img{ width:100%; height:100%; object-fit:contain; display:block; }
+
 /* ---------- provider view ---------- */
 .provider-header-card{ display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; padding:22px; }
 .provider-header-left{ display:flex; align-items:center; gap:16px; }
-.provider-avatar{ width:52px;height:52px;border-radius:14px; display:flex;align-items:center;justify-content:center; color:#fff; font-weight:800; font-size:20px; flex-shrink:0; }
 .provider-title{ font-size:20px; font-weight:800; margin:0; }
 .provider-meta{ font-size:13px; color:var(--text-muted); margin-top:2px; }
 .provider-priority-block{ text-align:right; }
@@ -287,17 +288,17 @@ footer.app-footer{ margin-top:48px; padding-top:20px; border-top:1px solid var(-
         </div>
       </div>
       <div class="top-actions">
-        <button class="icon-btn" id="theme-toggle" title="Changer de thème">🌙</button>
+        <button class="btn btn-ghost" id="theme-toggle" title="Changer de thème">Mode sombre</button>
         <button class="btn btn-ghost btn-danger-ghost" id="reset-all-btn" title="Réinitialiser toutes les priorités">Réinitialiser</button>
-        <button class="btn btn-primary" id="download-copy-btn">⇩ Télécharger une copie à partager</button>
+        <button class="btn btn-primary" id="download-copy-btn">Télécharger une copie à partager</button>
       </div>
     </div>
     <div id="mode-banner"></div>
     <nav class="tabs">
-      <button class="tab active" data-view="dashboard">📊 Dashboard</button>
-      <button class="tab" data-view="comex">🧭 Vue COMEX</button>
-      <button class="tab" data-view="provider">🏷️ Vue Provider</button>
-      <button class="tab" data-view="certification">🎓 Vue Certification</button>
+      <button class="tab active" data-view="dashboard">Dashboard</button>
+      <button class="tab" data-view="comex">Vue COMEX</button>
+      <button class="tab" data-view="provider">Vue Provider</button>
+      <button class="tab" data-view="certification">Vue Certification</button>
     </nav>
   </div>
 </div>
@@ -327,6 +328,8 @@ footer.app-footer{ margin-top:48px; padding-top:20px; border-top:1px solid var(-
 
 /* ============ bootstrap: data + mode ============ */
 var DATA = JSON.parse(document.getElementById('app-data').textContent);
+var PROVIDER_LOGOS = JSON.parse(document.getElementById('provider-logos').textContent);
+var DEFAULT_LOGO = document.getElementById('default-logo').textContent.trim();
 var FROZEN = JSON.parse(document.getElementById('frozen-flag').textContent) === true;
 var FROZEN_STATE = JSON.parse(document.getElementById('frozen-state').textContent);
 var STORAGE_KEY = 'prioCertifsWavestone_v1';
@@ -346,6 +349,17 @@ function seqColor(level /* 0..10 */){
   return SEQUENTIAL[Math.max(0,Math.min(SEQUENTIAL.length-1,i))];
 }
 function seqTextColor(level){ return level>=6 ? '#ffffff' : '#0b0b0b'; }
+
+function renderProviderBadge(provider, size, radius){
+  radius = radius || '999px';
+  var logo = PROVIDER_LOGOS[provider];
+  var bg = logo ? '#ffffff' : providerColor(provider);
+  var src = logo || DEFAULT_LOGO;
+  var pad = Math.round(size * (logo ? 0.16 : 0.24));
+  return '<span class="provider-badge" style="width:'+size+'px;height:'+size+'px;border-radius:'+radius+';background:'+bg+';padding:'+pad+'px;">'
+    + '<img src="'+src+'" alt="">'
+    + '</span>';
+}
 
 function loadStoredState(){
   var empty = { providerPriorities:{}, certOverrides:{} };
@@ -551,7 +565,7 @@ function renderDashboard(){
   var rankingHtml = providerRanking.map(function(r){
     var pct = Math.round(r.priority*10);
     return '<div class="mini-row">'
-      + '<span class="dot" style="background:'+providerColor(r.provider)+';"></span>'
+      + renderProviderBadge(r.provider, 18)
       + '<span class="name">'+escapeHtml(r.provider)+'</span>'
       + '<div class="mini-track"><div class="mini-fill" style="width:'+pct+'%;background:'+seqColor(r.priority)+';"></div></div>'
       + '<span class="mini-val">'+r.priority+'</span>'
@@ -577,7 +591,7 @@ function renderDashboard(){
   var gapHtml = gapRanking.map(function(r){
     var pct = Math.round(100*r.stats.restant/maxGap);
     return '<div class="mini-row">'
-      + '<span class="dot" style="background:'+providerColor(r.provider)+';"></span>'
+      + renderProviderBadge(r.provider, 18)
       + '<span class="name">'+escapeHtml(r.provider)+'</span>'
       + '<div class="mini-track"><div class="mini-fill" style="width:'+pct+'%;background:var(--serious);"></div></div>'
       + '<span class="mini-val">'+r.stats.restant+'</span>'
@@ -588,7 +602,7 @@ function renderDashboard(){
     '<div class="section"><div class="kpi-grid">'+kpiHtml+'</div></div>'
   + '<div class="section card card-pad">'
     + '<div class="chart-toolbar">'
-      + '<h2 class="section-title" style="margin:0;">Répartition des priorités (0 à 10)</h2>'
+      + '<h2 class="section-title" style="margin:0;">Répartition des priorités</h2>'
       + '<div class="segmented" id="dist-toggle">'
         + '<button data-mode="certification" class="'+(dashboardChartMode==='certification'?'active':'')+'">Par certification</button>'
         + '<button data-mode="provider" class="'+(dashboardChartMode==='provider'?'active':'')+'">Par fournisseur</button>'
@@ -649,7 +663,7 @@ function renderComex(){
     var partial = hasData && s.withObjectiveCount < s.certCount;
     var pickerId = 'comex-'+r.provider.replace(/[^a-z0-9]+/gi,'-');
     return '<tr>'
-      + '<td><button class="link-cell" data-provider="'+escapeHtml(r.provider)+'"><span class="cell-provider"><span class="dot" style="background:'+providerColor(r.provider)+';"></span>'+escapeHtml(r.provider)+'</span></button></td>'
+      + '<td><button class="link-cell" data-provider="'+escapeHtml(r.provider)+'"><span class="cell-provider">'+renderProviderBadge(r.provider, 20)+escapeHtml(r.provider)+'</span></button></td>'
       + '<td class="num">'+s.certCount+'</td>'
       + '<td class="num">'+(hasData ? s.obtenu + (partial?' <span class="muted" style="font-size:11px;">('+s.withObjectiveCount+'/'+s.certCount+' renseignées)</span>':'') : '<span class="na">Non renseigné</span>')+'</td>'
       + '<td class="num">'+(hasData ? s.quota : '<span class="na">N/A</span>')+'</td>'
@@ -687,7 +701,7 @@ var providerSort = { key:'name', dir:1 };
 
 function renderProviderPills(){
   return DATA.providers.map(function(p){
-    return '<button class="pill'+(p===selectedProvider?' active':'')+'" data-provider="'+escapeHtml(p)+'">'+escapeHtml(p)+'</button>';
+    return '<button class="pill'+(p===selectedProvider?' active':'')+'" data-provider="'+escapeHtml(p)+'">'+renderProviderBadge(p, 16)+escapeHtml(p)+'</button>';
   }).join('');
 }
 
@@ -732,7 +746,7 @@ function renderProvider(){
     '<div class="section pill-row">'+renderProviderPills()+'</div>'
   + '<div class="section card provider-header-card">'
     + '<div class="provider-header-left">'
-      + '<div class="provider-avatar" style="background:'+providerColor(p)+';">'+escapeHtml(p.slice(0,2).toUpperCase())+'</div>'
+      + renderProviderBadge(p, 52, '14px')
       + '<div><h2 class="provider-title">'+escapeHtml(p)+'</h2>'
       + '<div class="provider-meta">'+s.certCount+' certification(s)'+(s.withObjectiveCount?' · '+s.obtenu+'/'+s.quota+' certifiés (objectif 2026-2027)':' · objectifs non renseignés')+'</div></div>'
     + '</div>'
@@ -805,7 +819,7 @@ function renderCertification(){
     return '<tr>'
       + '<td><button class="link-cell" data-cert="'+c.id+'">'+escapeHtml(c.name)+'</button>'
         + (overridden ? ' <span class="override-badge">ajustée</span>' : '') + '</td>'
-      + '<td><span class="cell-provider" style="font-weight:600;"><span class="dot" style="background:'+providerColor(c.provider)+';"></span>'+escapeHtml(c.provider)+'</span></td>'
+      + '<td><span class="cell-provider" style="font-weight:600;">'+renderProviderBadge(c.provider, 20)+escapeHtml(c.provider)+'</span></td>'
       + '<td>'+ (c.difficulty ? '<span class="diff-badge">'+escapeHtml(c.difficulty)+'</span>' : '<span class="na">N/A</span>') +'</td>'
       + '<td>'+ renderProgressCell(c) +'</td>'
       + '<td>'+ renderGapCell(c) +'</td>'
@@ -858,15 +872,15 @@ function openCertDrawer(certId){
 
   var overrideControls = FROZEN ? '' :
     '<div style="display:flex;gap:8px;align-items:center;">'
-    + (overridden ? '<button class="btn btn-sm" id="drawer-clear-override">↺ Revenir à la priorité du fournisseur ('+providerPrio+')</button>' : '')
+    + (overridden ? '<button class="btn btn-sm" id="drawer-clear-override">Revenir à la priorité du fournisseur ('+providerPrio+')</button>' : '')
     + '</div>';
 
   document.getElementById('cert-drawer').innerHTML =
     '<div class="drawer-head">'
       + '<div><div class="drawer-title">'+escapeHtml(c.name)+'</div>'
-      + '<div class="cell-provider" style="font-size:13px;"><span class="dot" style="background:'+providerColor(c.provider)+';"></span>'+escapeHtml(c.provider)
+      + '<div class="cell-provider" style="font-size:13px;">'+renderProviderBadge(c.provider, 20)+escapeHtml(c.provider)
         + (c.difficulty ? ' · <span class="diff-badge">'+escapeHtml(c.difficulty)+'</span>' : '') + '</div></div>'
-      + '<button class="drawer-close" id="drawer-close">✕</button>'
+      + '<button class="drawer-close" id="drawer-close">&times;</button>'
     + '</div>'
     + '<div class="drawer-body">'
       + '<div class="kv-grid">'
@@ -924,11 +938,11 @@ function setupModeBanner(){
   var el = document.getElementById('mode-banner');
   if (FROZEN){
     var dateStr = FROZEN_EXPORTED_AT ? new Date(FROZEN_EXPORTED_AT).toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}) : 'date inconnue';
-    el.innerHTML = '<div class="mode-banner frozen">🔒 Mode consultation — copie partagée le '+dateStr+'. Les priorités affichées sont figées ; toute modification que vous feriez ici reste locale à votre navigateur et n\'est pas renvoyée à l\'auteur.</div>';
+    el.innerHTML = '<div class="mode-banner frozen">Mode consultation — copie partagée le '+dateStr+'. Les priorités affichées sont figées ; toute modification que vous feriez ici reste locale à votre navigateur et n\'est pas renvoyée à l\'auteur.</div>';
     document.getElementById('download-copy-btn').style.display = 'none';
     document.getElementById('reset-all-btn').style.display = 'none';
   } else {
-    el.innerHTML = '<div class="mode-banner edit">✏️ Mode édition — vos priorités sont enregistrées automatiquement dans ce navigateur (localStorage).</div>';
+    el.innerHTML = '<div class="mode-banner edit">Mode édition — vos priorités sont enregistrées automatiquement dans ce navigateur (localStorage).</div>';
   }
 }
 
@@ -936,7 +950,7 @@ function setupModeBanner(){
 function applyTheme(t){
   if (t) document.documentElement.setAttribute('data-theme', t);
   else document.documentElement.removeAttribute('data-theme');
-  document.getElementById('theme-toggle').textContent = (t==='dark') ? '☀️' : '🌙';
+  document.getElementById('theme-toggle').textContent = (t==='dark') ? 'Mode clair' : 'Mode sombre';
 }
 (function initTheme(){
   var saved = null;

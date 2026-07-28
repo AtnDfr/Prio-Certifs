@@ -1,0 +1,19 @@
+{
+  "Anthropic": "anthropic.svg",
+  "AWS": null,
+  "Azure": null,
+  "Collibra": null,
+  "Databricks": "databricks.svg",
+  "Dataiku": "dataiku.svg",
+  "Google Cloud Platform": "google-cloud-platform.svg",
+  "Hugging Face": "hugging-face.svg",
+  "IBM": null,
+  "IEC": null,
+  "Linux Foundation": "linux-foundation.svg",
+  "Microsoft": null,
+  "Palantir": "palantir.svg",
+  "Salesforce": null,
+  "Scaled Agile": null,
+  "Snowflake": "snowflake.svg",
+  "Autre": null
+}

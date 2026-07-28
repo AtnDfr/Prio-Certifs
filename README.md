@@ -28,11 +28,17 @@ Le catalogue (88 certifications, colonnes réellement présentes : Certification
 
 Le rapprochement entre les deux tableaux (les noms diffèrent d'un onglet à l'autre) a été fait par un matching automatique (fournisseur + similarité de nom), avec 3 décisions actées avec Antoine (Wavestone) — voir `data/build.py` pour le détail et la justification de chacune.
 
-### Régénérer `index.html` après une mise à jour du fichier source
+### Logos fournisseurs
+
+Les logos sont des fichiers SVG stockés dans `public/logos/`, mappés aux 17 fournisseurs du catalogue via `data/provider-logos.json`. Ils proviennent du jeu d'icônes open source [Simple Icons](https://simpleicons.org) (récupéré via le registre npm, aucune dépendance à un CDN externe). 8 fournisseurs ont un vrai logo (Anthropic, Databricks, Dataiku, Google Cloud Platform, Hugging Face, Linux Foundation, Palantir, Snowflake) ; les 9 autres (AWS, Azure, Collibra, IBM, IEC, Microsoft, Salesforce, Scaled Agile, Autre) n'ont pas d'icône disponible dans ce jeu (marques retirées pour raisons légales, ou non référencées) et affichent automatiquement le badge générique `public/logos/default.svg` sur fond coloré — l'absence d'un logo ne casse jamais l'affichage.
+
+Pour compléter un logo manquant : déposer le SVG dans `public/logos/`, renseigner son nom de fichier dans `data/provider-logos.json`, puis relancer `python3 data/build.py`.
+
+### Régénérer `index.html` après une mise à jour du fichier source ou des logos
 
 ```bash
 pip install openpyxl
 python3 data/build.py
 ```
 
-Le script relit `data/source_certifications.xlsx` et `data/app_template.html`, refait le matching catalogue ↔ objectifs, et réécrit `index.html` à la racine. Les priorités saisies par les utilisateurs (stockées dans leur `localStorage`) ne sont pas affectées par une régénération.
+Le script relit `data/source_certifications.xlsx`, `data/app_template.html` et `public/logos/`, refait le matching catalogue ↔ objectifs, et réécrit `index.html` à la racine (tout est ré-embarqué en base64 dans ce fichier unique, aucune dépendance externe au runtime). Les priorités saisies par les utilisateurs (stockées dans leur `localStorage`) ne sont pas affectées par une régénération.

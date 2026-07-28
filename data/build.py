@@ -39,6 +39,8 @@ BASE_DIR = Path(__file__).parent
 SOURCE_XLSX = BASE_DIR / "source_certifications.xlsx"
 TEMPLATE_HTML = BASE_DIR / "app_template.html"
 LOGO_PNG = BASE_DIR / "wavestone-logo.png"
+PROVIDER_LOGOS_JSON = BASE_DIR / "provider-logos.json"
+LOGOS_DIR = BASE_DIR.parent / "public" / "logos"
 OUTPUT_HTML = BASE_DIR.parent / "index.html"
 
 MANUAL_OVERRIDES = {
@@ -156,6 +158,25 @@ def build_data(catalogue, obj_lookup):
     return {"certifications": certifications, "providers": providers}
 
 
+def svg_data_uri(path):
+    svg_b64 = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:image/svg+xml;base64,{svg_b64}"
+
+
+def build_provider_logos():
+    mapping = json.loads(PROVIDER_LOGOS_JSON.read_text(encoding="utf-8"))
+    logos = {}
+    for provider, filename in mapping.items():
+        if not filename:
+            continue
+        path = LOGOS_DIR / filename
+        if not path.exists():
+            raise ValueError(f"Logo manquant pour '{provider}': {path}")
+        logos[provider] = svg_data_uri(path)
+    default_uri = svg_data_uri(LOGOS_DIR / "default.svg")
+    return logos, default_uri
+
+
 def main():
     wb = openpyxl.load_workbook(SOURCE_XLSX, data_only=True)
     catalogue = load_catalogue(wb)
@@ -170,13 +191,20 @@ def main():
     data_json = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
     safe_json = data_json.replace("</", "<\\/")
 
+    provider_logos, default_logo = build_provider_logos()
+    print(f"logos fournisseurs: {len(provider_logos)}/{len(json.loads(PROVIDER_LOGOS_JSON.read_text()))} disponibles (les autres utilisent le badge par defaut)")
+    logos_json = json.dumps(provider_logos, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+
     template = TEMPLATE_HTML.read_text(encoding="utf-8")
-    if "/*__APP_DATA__*/" not in template:
-        raise ValueError("Placeholder /*__APP_DATA__*/ introuvable dans le template.")
-    if "/*__LOGO_DATA_URI__*/" not in template:
-        raise ValueError("Placeholder /*__LOGO_DATA_URI__*/ introuvable dans le template.")
+    for placeholder in ("/*__APP_DATA__*/", "/*__LOGO_DATA_URI__*/", "/*__PROVIDER_LOGOS__*/", "/*__DEFAULT_LOGO__*/"):
+        if placeholder not in template:
+            raise ValueError(f"Placeholder {placeholder} introuvable dans le template.")
     logo_b64 = base64.b64encode(LOGO_PNG.read_bytes()).decode("ascii")
-    output = template.replace("/*__APP_DATA__*/", safe_json).replace("/*__LOGO_DATA_URI__*/", logo_b64)
+    output = (template
+              .replace("/*__APP_DATA__*/", safe_json)
+              .replace("/*__LOGO_DATA_URI__*/", logo_b64)
+              .replace("/*__PROVIDER_LOGOS__*/", logos_json)
+              .replace("/*__DEFAULT_LOGO__*/", default_logo))
     OUTPUT_HTML.write_text(output, encoding="utf-8")
     print(f"-> {OUTPUT_HTML} ({len(output)} octets)")
 
