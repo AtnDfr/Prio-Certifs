@@ -1,5 +1,6 @@
 """
-Regenere index.html a partir de data/source_certifications.xlsx et data/app_template.html.
+Regenere "Priorisation Certifs.html" (et sa copie index.html pour GitHub Pages)
+a partir de data/source_certifications.xlsx et data/app_template.html.
 
 Usage:
     python3 data/build.py
@@ -41,6 +42,7 @@ TEMPLATE_HTML = BASE_DIR / "app_template.html"
 LOGO_PNG = BASE_DIR / "wavestone-logo.png"
 PROVIDER_LOGOS_JSON = BASE_DIR / "provider-logos.json"
 LOGOS_DIR = BASE_DIR.parent / "public" / "logos"
+PAGES_HTML = BASE_DIR.parent / "index.html"
 OUTPUT_HTML = BASE_DIR.parent / "Priorisation Certifs.html"
 
 MANUAL_OVERRIDES = {
@@ -213,6 +215,8 @@ def main():
               .replace("/*__DEFAULT_LOGO__*/", default_logo))
     OUTPUT_HTML.write_text(output, encoding="utf-8")
     print(f"-> {OUTPUT_HTML} ({len(output)} octets)")
+    PAGES_HTML.write_text(output, encoding="utf-8")
+    print(f"-> {PAGES_HTML} (copie identique, pour GitHub Pages)")
 
 
 if __name__ == "__main__":
