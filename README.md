@@ -4,7 +4,7 @@ Application de priorisation stratégique des certifications, à destination du C
 
 ## Utiliser l'application
 
-Ouvrir **`index.html`** dans n'importe quel navigateur (double-clic). Aucune installation, aucun serveur, aucune connexion réseau requise.
+Ouvrir **`Priorisation Certifs.html`** dans n'importe quel navigateur (double-clic). Aucune installation, aucun serveur, aucune connexion réseau requise.
 
 - **Dashboard** : vue d'ensemble en quelques secondes (KPIs, répartition des priorités 0-10, top priorités, top gaps, exceptions).
 - **Vue COMEX** : priorisation au niveau fournisseur (Provider). C'est le niveau de décision principal.
@@ -34,11 +34,11 @@ Les logos sont des fichiers SVG stockés dans `public/logos/`, mappés aux 17 fo
 
 Pour compléter un logo manquant : déposer le SVG dans `public/logos/`, renseigner son nom de fichier dans `data/provider-logos.json`, puis relancer `python3 data/build.py`.
 
-### Régénérer `index.html` après une mise à jour du fichier source ou des logos
+### Régénérer `Priorisation Certifs.html` après une mise à jour du fichier source ou des logos
 
 ```bash
 pip install openpyxl
 python3 data/build.py
 ```
 
-Le script relit `data/source_certifications.xlsx`, `data/app_template.html` et `public/logos/`, refait le matching catalogue ↔ objectifs, et réécrit `index.html` à la racine (tout est ré-embarqué en base64 dans ce fichier unique, aucune dépendance externe au runtime). Les priorités saisies par les utilisateurs (stockées dans leur `localStorage`) ne sont pas affectées par une régénération.
+Le script relit `data/source_certifications.xlsx`, `data/app_template.html` et `public/logos/`, refait le matching catalogue ↔ objectifs, et réécrit `Priorisation Certifs.html` à la racine (tout est ré-embarqué en base64 dans ce fichier unique, aucune dépendance externe au runtime). Les priorités saisies par les utilisateurs (stockées dans leur `localStorage`) ne sont pas affectées par une régénération.

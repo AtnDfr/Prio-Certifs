@@ -41,7 +41,7 @@ TEMPLATE_HTML = BASE_DIR / "app_template.html"
 LOGO_PNG = BASE_DIR / "wavestone-logo.png"
 PROVIDER_LOGOS_JSON = BASE_DIR / "provider-logos.json"
 LOGOS_DIR = BASE_DIR.parent / "public" / "logos"
-OUTPUT_HTML = BASE_DIR.parent / "index.html"
+OUTPUT_HTML = BASE_DIR.parent / "Priorisation Certifs.html"
 
 MANUAL_OVERRIDES = {
     "Databricks - Spark Data Engineer": None,  # decision 1: ecarte
