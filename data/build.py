@@ -158,9 +158,15 @@ def build_data(catalogue, obj_lookup):
     return {"certifications": certifications, "providers": providers}
 
 
-def svg_data_uri(path):
-    svg_b64 = base64.b64encode(path.read_bytes()).decode("ascii")
-    return f"data:image/svg+xml;base64,{svg_b64}"
+IMAGE_MIME_TYPES = {".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp"}
+
+
+def image_data_uri(path):
+    mime = IMAGE_MIME_TYPES.get(path.suffix.lower())
+    if not mime:
+        raise ValueError(f"Extension d'image non supportee: {path}")
+    b64 = base64.b64encode(path.read_bytes()).decode("ascii")
+    return f"data:{mime};base64,{b64}"
 
 
 def build_provider_logos():
@@ -172,8 +178,8 @@ def build_provider_logos():
         path = LOGOS_DIR / filename
         if not path.exists():
             raise ValueError(f"Logo manquant pour '{provider}': {path}")
-        logos[provider] = svg_data_uri(path)
-    default_uri = svg_data_uri(LOGOS_DIR / "default.svg")
+        logos[provider] = image_data_uri(path)
+    default_uri = image_data_uri(LOGOS_DIR / "default.svg")
     return logos, default_uri
 
 
