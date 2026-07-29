@@ -6,6 +6,8 @@ Application de priorisation stratégique des certifications, à destination du C
 
 Ouvrir **`Priorisation Certifs.html`** dans n'importe quel navigateur (double-clic). Aucune installation, aucun serveur, aucune connexion réseau requise.
 
+Une version identique et éditable est aussi accessible en ligne via GitHub Pages : https://atndfr.github.io/Prio-Certifs/ (pratique pour laisser des collègues tester sans transfert de fichier — chaque visiteur édite dans son propre navigateur, sans synchronisation entre eux ni avec le fichier local).
+
 - **Dashboard** : vue d'ensemble en quelques secondes (KPIs, répartition des priorités 0-10, top priorités, top gaps, exceptions).
 - **Vue COMEX** : priorisation au niveau fournisseur (Provider). C'est le niveau de décision principal.
 - **Vue Provider** : détail des certifications d'un fournisseur, avec héritage automatique de la priorité et possibilité de surcharge individuelle.
@@ -28,9 +30,13 @@ Le catalogue (88 certifications, colonnes réellement présentes : Certification
 
 Le rapprochement entre les deux tableaux (les noms diffèrent d'un onglet à l'autre) a été fait par un matching automatique (fournisseur + similarité de nom), avec 3 décisions actées avec Antoine (Wavestone) — voir `data/build.py` pour le détail et la justification de chacune.
 
+### Exporter les priorités pour un agent / traitement automatisé
+
+Le bouton **« Exporter les priorités (JSON) »** télécharge un fichier `prio-certifs-wavestone-export-AAAA-MM-JJ.json` : priorité de chaque fournisseur, et pour chaque certification son nom, fournisseur, difficulté, description, objectif/obtenu/restant, priorité effective (héritée ou surchargée) et un indicateur `priorityOverridden`. C'est un export manuel, déclenché à la demande — pour qu'un agent externe (ex. surveillant un dossier SharePoint) détecte une mise à jour, il suffit de déposer ce fichier dans le dossier suivi et de comparer son champ `exportedAt` à la dernière valeur connue.
+
 ### Logos fournisseurs
 
-Les logos sont des fichiers SVG stockés dans `public/logos/`, mappés aux 17 fournisseurs du catalogue via `data/provider-logos.json`. Ils proviennent du jeu d'icônes open source [Simple Icons](https://simpleicons.org) (récupéré via le registre npm, aucune dépendance à un CDN externe). 8 fournisseurs ont un vrai logo (Anthropic, Databricks, Dataiku, Google Cloud Platform, Hugging Face, Linux Foundation, Palantir, Snowflake) ; les 9 autres (AWS, Azure, Collibra, IBM, IEC, Microsoft, Salesforce, Scaled Agile, Autre) n'ont pas d'icône disponible dans ce jeu (marques retirées pour raisons légales, ou non référencées) et affichent automatiquement le badge générique `public/logos/default.svg` sur fond coloré — l'absence d'un logo ne casse jamais l'affichage.
+Les logos sont des fichiers stockés dans `public/logos/`, mappés aux 17 fournisseurs du catalogue via `data/provider-logos.json`. 8 proviennent du jeu d'icônes open source [Simple Icons](https://simpleicons.org) (récupéré via le registre npm, aucune dépendance à un CDN externe) : Anthropic, Databricks, Dataiku, Google Cloud Platform, Hugging Face, Linux Foundation, Palantir, Snowflake. 8 autres sont les logos officiels fournis directement par Antoine : AWS, Azure, Collibra, IBM, IEC, Microsoft, Salesforce, Scaled Agile. Seul **Autre** (regroupement générique, pas une marque) n'a pas de logo et affiche le badge par défaut `public/logos/default.svg` sur fond coloré — l'absence d'un logo ne casse jamais l'affichage.
 
 Pour compléter un logo manquant : déposer le SVG dans `public/logos/`, renseigner son nom de fichier dans `data/provider-logos.json`, puis relancer `python3 data/build.py`.
 

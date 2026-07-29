@@ -290,6 +290,7 @@ footer.app-footer{ margin-top:48px; padding-top:20px; border-top:1px solid var(-
       <div class="top-actions">
         <button class="btn btn-ghost" id="theme-toggle" title="Changer de thème">Mode sombre</button>
         <button class="btn btn-ghost btn-danger-ghost" id="reset-all-btn" title="Réinitialiser toutes les priorités">Réinitialiser</button>
+        <button class="btn btn-ghost" id="export-json-btn" title="Exporter les priorités au format JSON, pour un agent ou un traitement automatisé">Exporter les priorités (JSON)</button>
         <button class="btn btn-primary" id="download-copy-btn">Télécharger une copie à partager</button>
       </div>
     </div>
@@ -941,6 +942,7 @@ function setupModeBanner(){
     el.innerHTML = '<div class="mode-banner frozen">Mode consultation — copie partagée le '+dateStr+'. Les priorités affichées sont figées ; toute modification que vous feriez ici reste locale à votre navigateur et n\'est pas renvoyée à l\'auteur.</div>';
     document.getElementById('download-copy-btn').style.display = 'none';
     document.getElementById('reset-all-btn').style.display = 'none';
+    document.getElementById('export-json-btn').style.display = 'none';
   } else {
     el.innerHTML = '<div class="mode-banner edit">Mode édition — vos priorités sont enregistrées automatiquement dans ce navigateur (localStorage).</div>';
   }
@@ -966,6 +968,40 @@ document.getElementById('theme-toggle').addEventListener('click', function(){
 
 /* ============ reset all ============ */
 document.getElementById('reset-all-btn').addEventListener('click', resetAll);
+
+/* ============ export priorities as JSON (for an agent / automated processing) ============ */
+document.getElementById('export-json-btn').addEventListener('click', function(){
+  var payload = {
+    source: 'Prio Certifs - Wavestone',
+    exportedAt: new Date().toISOString(),
+    providers: DATA.providers.map(function(p){
+      return { provider: p, priority: getProviderPriority(p) };
+    }),
+    certifications: DATA.certifications.map(function(c){
+      return {
+        id: c.id,
+        name: c.name,
+        provider: c.provider,
+        difficulty: c.difficulty,
+        description: c.description,
+        objective: c.objective,
+        priority: getEffectivePriority(c),
+        priorityOverridden: getCertOverride(c.id) !== null
+      };
+    })
+  };
+  var json = JSON.stringify(payload, null, 2);
+  var blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var stamp = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = 'prio-certifs-wavestone-export-' + stamp + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+});
 
 /* ============ share / download frozen copy ============ */
 document.getElementById('download-copy-btn').addEventListener('click', function(){
