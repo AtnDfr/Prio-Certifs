@@ -201,7 +201,8 @@ table.data-table{ width:100%; border-collapse:collapse; font-size:13px; }
 .cell-provider{ display:flex; align-items:center; gap:8px; font-weight:700; }
 .muted{ color:var(--text-muted); font-style:italic; }
 .na{ color:var(--text-muted); }
-.num{ font-variant-numeric:tabular-nums; text-align:right; }
+.num{ font-variant-numeric:tabular-nums; text-align:center; }
+.data-table thead th.num{ text-align:center; }
 .progress-cell{ display:flex; flex-direction:column; gap:4px; min-width:110px; }
 .progress-track{ height:6px; background:var(--surface-2); border-radius:3px; overflow:hidden; }
 .progress-fill{ height:100%; border-radius:3px; }
@@ -863,11 +864,12 @@ function renderComex(){
     return dir*(av-bv);
   });
 
+  var numKeys = ['certCount','obtenu','enCours'];
   var header = ['provider:Fournisseur','certCount:Nb certifications','obtenu:Nb certifiés','enCours:En cours','priority:Priorité']
     .map(function(spec){
       var parts = spec.split(':'); var key=parts[0], label=parts[1];
       var arrow = comexSort.key===key ? (comexSort.dir===1?' ▲':' ▼') : '';
-      return '<th data-key="'+key+'">'+label+arrow+'</th>';
+      return '<th data-key="'+key+'"'+(numKeys.indexOf(key)!==-1?' class="num"':'')+'>'+label+arrow+'</th>';
     }).join('');
 
   var body = rows.map(function(r){
