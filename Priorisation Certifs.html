@@ -940,12 +940,11 @@ function renderProvider(){
     if (k==='priority') return dir*(getEffectivePriority(a)-getEffectivePriority(b));
     if (k==='obtenu') return dir*(fmtSortVal(getSourceObtenu(a))-fmtSortVal(getSourceObtenu(b)));
     if (k==='enCours') return dir*(fmtSortVal(getSourceEnCours(a))-fmtSortVal(getSourceEnCours(b)));
-    if (k==='target') return dir*(fmtSortVal(getEffectiveTarget(a))-fmtSortVal(getEffectiveTarget(b)));
     if (k==='reste') return dir*(fmtSortVal(getResteAEngager(a))-fmtSortVal(getResteAEngager(b)));
     return 0;
   });
 
-  var header = ['name:Certification','level:Niveau','obtenu:Certifiés','enCours:En cours','target:Objectif fixé','reste:Reste à engager','priority:Priorité']
+  var header = ['name:Certification','level:Niveau','obtenu:Certifiés','enCours:En cours','reste:Reste à engager','priority:Priorité']
     .map(function(spec){
       var parts = spec.split(':'); var key=parts[0], label=parts[1];
       if (key === 'level') return '<th style="cursor:default;">'+label+'</th>';
@@ -962,12 +961,11 @@ function renderProvider(){
       + '<td>'+ (c.difficulty ? '<span class="diff-badge">'+escapeHtml(c.difficulty)+'</span>' : '<span class="na">N/A</span>') +'</td>'
       + '<td>'+ renderProgressCell(c) +'</td>'
       + '<td>'+ renderEnCoursCell(c) +'</td>'
-      + '<td>'+ renderTargetInlineInput(c) +'</td>'
       + '<td>'+ renderResteAEngagerCell(c) +'</td>'
       + '<td>'+ renderPriorityPicker(eff, function(certId){ return function(v){ setCertOverride(certId, v); }; }(c.id))
         + (isPrioritySuggested(c) ? ' <span class="suggested-badge">suggérée</span>' : '') + '</td>'
       + '</tr>';
-  }).join('') || '<tr><td colspan="7"><div class="empty-hint">Aucune certification ne correspond à ce filtre.</div></td></tr>';
+  }).join('') || '<tr><td colspan="6"><div class="empty-hint">Aucune certification ne correspond à ce filtre.</div></td></tr>';
 
   document.getElementById('view-provider').innerHTML =
     '<div class="section pill-row">'+renderProviderPills()+'</div>'
@@ -1009,7 +1007,6 @@ function renderProvider(){
     btn.addEventListener('click', function(){ openCertDrawer(btn.getAttribute('data-cert')); });
   });
   wirePickerHandlers();
-  wireTargetInputs();
 }
 
 /* ============ view: CERTIFICATION ============ */
