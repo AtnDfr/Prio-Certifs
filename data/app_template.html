@@ -231,6 +231,24 @@ table.data-table{ width:100%; border-collapse:collapse; font-size:13px; }
   background: color-mix(in srgb, var(--cat-4) 20%, transparent); color:#8a5a00;
 }
 :root[data-theme="dark"] .override-badge{ color: var(--cat-4); }
+.status-badge{
+  display:inline-flex; align-items:center; font-size:11px; font-weight:700; padding:4px 9px;
+  border-radius:6px; color:#fff; white-space:nowrap;
+}
+.status-badge.status-na{ background:var(--surface-2); color:var(--text-muted); }
+.status-count-row{ display:flex; gap:14px; flex-wrap:wrap; }
+.status-count-tile{
+  flex:1; min-width:120px; background:var(--surface-2); border-radius:10px; padding:14px;
+  display:flex; flex-direction:column; align-items:flex-start; gap:4px;
+}
+.status-count-dot{ width:10px; height:10px; border-radius:50%; }
+.status-count-value{ font-size:22px; font-weight:800; }
+.status-count-label{ font-size:12px; color:var(--text-secondary); font-weight:600; }
+.target-editor{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.target-input{
+  width:100px; padding:8px 10px; border-radius:8px; border:1px solid var(--border-strong);
+  background:var(--surface-1); color:var(--text-primary); font-size:13px;
+}
 
 .provider-badge{
   display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
@@ -363,14 +381,15 @@ function renderProviderBadge(provider, size, radius){
 }
 
 function loadStoredState(){
-  var empty = { providerPriorities:{}, certOverrides:{} };
+  var empty = { providerPriorities:{}, certOverrides:{}, certTargets:{} };
   try{
     var raw = localStorage.getItem(STORAGE_KEY);
     if(!raw) return empty;
     var parsed = JSON.parse(raw);
     return {
       providerPriorities: parsed.providerPriorities || {},
-      certOverrides: parsed.certOverrides || {}
+      certOverrides: parsed.certOverrides || {},
+      certTargets: parsed.certTargets || {}
     };
   }catch(e){ return empty; }
 }
@@ -381,7 +400,8 @@ function saveStoredState(){
 
 var state = FROZEN ? {
   providerPriorities: (FROZEN_STATE && FROZEN_STATE.providerPriorities) || {},
-  certOverrides: (FROZEN_STATE && FROZEN_STATE.certOverrides) || {}
+  certOverrides: (FROZEN_STATE && FROZEN_STATE.certOverrides) || {},
+  certTargets: (FROZEN_STATE && FROZEN_STATE.certTargets) || {}
 } : loadStoredState();
 
 var FROZEN_EXPORTED_AT = FROZEN && FROZEN_STATE ? FROZEN_STATE.exportedAt : null;
@@ -424,10 +444,77 @@ function clearCertOverride(certId){
 }
 function resetAll(){
   if (FROZEN) return;
-  if(!confirm('Réinitialiser toutes les priorités (providers et exceptions) ? Cette action est irréversible.')) return;
-  state = { providerPriorities:{}, certOverrides:{} };
+  if(!confirm('Réinitialiser toutes les priorités et tous les objectifs (providers et exceptions) ? Cette action est irréversible.')) return;
+  state = { providerPriorities:{}, certOverrides:{}, certTargets:{} };
   saveStoredState();
   renderAll();
+}
+
+/* ============ objectifs : donnees sources vs decisions COMEX ============
+   Sources (lecture seule, jamais modifiables depuis l'interface) :
+     objective.obtenu  - nb de certifies actuels
+     objective.enCours - nb de personnes en cours de certification (aucune
+                         source ne l'alimente encore : reste "Non renseigne"
+                         tant qu'un fichier/flux ne le fournit pas)
+   Decision COMEX (editable, persistee dans state.certTargets) :
+     l'objectif de certifies vise pour une certification. Par defaut, une
+     certification n'a pas d'objectif ; les quotas 2026-2027 deja presents
+     dans le fichier source servent de valeur de depart, modifiable ou
+     supprimable comme n'importe quelle autre certification. */
+function getSourceObtenu(cert){ var v = cert.objective.obtenu; return (v===null||v===undefined) ? null : v; }
+function getSourceEnCours(cert){ var v = cert.objective.enCours; return (v===null||v===undefined) ? null : v; }
+function getBaseTarget(cert){ var v = cert.objective.quota; return (v===null||v===undefined) ? null : v; }
+
+function isTargetOverridden(cert){ return Object.prototype.hasOwnProperty.call(state.certTargets, cert.id); }
+function getEffectiveTarget(cert){
+  if (isTargetOverridden(cert)) return state.certTargets[cert.id]; // nombre, ou null = "objectif supprime"
+  return getBaseTarget(cert);
+}
+function setCertTarget(certId, value){
+  if (FROZEN) return;
+  state.certTargets[certId] = value;
+  saveStoredState();
+  renderAll();
+}
+function clearCertTarget(certId){
+  if (FROZEN) return;
+  state.certTargets[certId] = null; // decision explicite : pas d'objectif, meme si une valeur source existe
+  saveStoredState();
+  renderAll();
+}
+
+function getProjection(cert){
+  var o = getSourceObtenu(cert), e = getSourceEnCours(cert);
+  return (o !== null && e !== null) ? (o + e) : null;
+}
+function getGap(cert){
+  var t = getEffectiveTarget(cert), o = getSourceObtenu(cert);
+  return (t !== null && o !== null) ? Math.max(t - o, 0) : null;
+}
+function getResteAEngager(cert){
+  var t = getEffectiveTarget(cert), p = getProjection(cert);
+  return (t !== null && p !== null) ? Math.max(t - p, 0) : null;
+}
+var STATUS_META = {
+  atteint:    { label:'Objectif atteint', color:'var(--good)' },
+  bonneVoie:  { label:'En bonne voie',     color:'var(--accent)' },
+  accelerer:  { label:'À accélérer',       color:'var(--serious)' },
+  na:         { label:'Non renseigné',     color:null }
+};
+function getCertStatus(cert){
+  var t = getEffectiveTarget(cert), p = getProjection(cert);
+  if (t === null || p === null) return 'na';
+  if (Math.max(t - p, 0) <= 0) return 'atteint';
+  var ratio = t > 0 ? p / t : 0;
+  if (ratio >= 0.6) return 'bonneVoie';
+  if (getEffectivePriority(cert) >= 7) return 'accelerer';
+  return 'bonneVoie';
+}
+function renderStatusBadge(cert){
+  var key = getCertStatus(cert);
+  var meta = STATUS_META[key];
+  if (key === 'na') return '<span class="status-badge status-na">'+meta.label+'</span>';
+  return '<span class="status-badge" style="background:'+meta.color+';">'+meta.label+'</span>';
 }
 
 /* ============ derived data helpers ============ */
@@ -436,19 +523,28 @@ function certsByProvider(provider){
 }
 function providerStats(provider){
   var certs = certsByProvider(provider);
-  var withObj = certs.filter(function(c){ return c.objective; });
-  var quota = withObj.reduce(function(s,c){ return s + c.objective.quota; }, 0);
-  var obtenu = withObj.reduce(function(s,c){ return s + c.objective.obtenu; }, 0);
-  var restant = withObj.reduce(function(s,c){ return s + c.objective.restant; }, 0);
+  var withTarget = certs.filter(function(c){ return getEffectiveTarget(c) !== null; });
+  var withObtenu = withTarget.filter(function(c){ return getSourceObtenu(c) !== null; });
+  var withProjection = withTarget.filter(function(c){ return getProjection(c) !== null; });
+  var withEnCours = certs.filter(function(c){ return getSourceEnCours(c) !== null; });
   return {
     certCount: certs.length,
-    withObjectiveCount: withObj.length,
-    quota: quota, obtenu: obtenu, restant: restant,
+    targetDefinedCount: withTarget.length,
+    obtenuKnownCount: withObtenu.length,
+    quota: withObtenu.reduce(function(s,c){ return s + getEffectiveTarget(c); }, 0),
+    obtenu: withObtenu.reduce(function(s,c){ return s + getSourceObtenu(c); }, 0),
+    gap: withObtenu.reduce(function(s,c){ return s + getGap(c); }, 0),
+    enCoursKnownCount: withEnCours.length,
+    enCours: withEnCours.reduce(function(s,c){ return s + getSourceEnCours(c); }, 0),
+    projectionKnownCount: withProjection.length,
+    projection: withProjection.reduce(function(s,c){ return s + getProjection(c); }, 0),
+    resteAEngager: withProjection.reduce(function(s,c){ return s + getResteAEngager(c); }, 0),
     priority: getProviderPriority(provider),
     touched: isProviderTouched(provider)
   };
 }
 function fmtNA(n){ return (n === null || n === undefined) ? 'N/A' : n; }
+function fmtSortVal(n){ return (n === null || n === undefined) ? -1 : n; }
 
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, function(c){
@@ -493,24 +589,44 @@ function wirePickerHandlers(){
   pendingPickerHandlers = [];
 }
 
-/* ============ progress cell ============ */
+/* ============ cellules objectif / suivi ============ */
 function renderProgressCell(cert){
-  if(!cert.objective){
-    return '<span class="na">Non renseigné</span>';
-  }
-  var o = cert.objective;
-  var pct = o.quota > 0 ? Math.min(100, Math.round(100*o.obtenu/o.quota)) : 0;
-  var color = o.restant <= 0 ? 'var(--good)' : (pct >= 60 ? 'var(--accent)' : (pct >= 25 ? 'var(--warning)' : 'var(--serious)'));
+  var t = getEffectiveTarget(cert);
+  if (t === null) return '<span class="muted">Objectif non défini</span>';
+  var o = getSourceObtenu(cert);
+  if (o === null) return '<span class="na">Non renseigné</span>';
+  var pct = t > 0 ? Math.min(100, Math.round(100*o/t)) : 0;
+  var gap = getGap(cert);
+  var color = gap<=0 ? 'var(--good)' : (pct >= 60 ? 'var(--accent)' : (pct >= 25 ? 'var(--warning)' : 'var(--serious)'));
   return '<div class="progress-cell">'
-    + '<div class="progress-text">' + o.obtenu + ' / ' + o.quota + ' certifiés</div>'
+    + '<div class="progress-text">' + o + ' / ' + t + ' certifiés</div>'
     + '<div class="progress-track"><div class="progress-fill" style="width:'+pct+'%;background:'+color+';"></div></div>'
     + '</div>';
 }
 function renderGapCell(cert){
-  if(!cert.objective) return '<span class="na">N/A</span>';
-  var r = cert.objective.restant;
-  if (r <= 0) return '<span style="color:var(--good);font-weight:700;">Atteint</span>';
-  return '<span style="font-weight:700;">' + r + '</span>';
+  var v = getGap(cert);
+  if (v === null) return '<span class="na">N/A</span>';
+  if (v <= 0) return '<span style="color:var(--good);font-weight:700;">Atteint</span>';
+  return '<span style="font-weight:700;">' + v + '</span>';
+}
+function renderEnCoursCell(cert){
+  var v = getSourceEnCours(cert);
+  return v === null ? '<span class="na">Non renseigné</span>' : String(v);
+}
+function renderProjectionCell(cert){
+  var v = getProjection(cert);
+  return v === null ? '<span class="na">Non renseigné</span>' : String(v);
+}
+function renderObjectifCell(cert){
+  var t = getEffectiveTarget(cert);
+  if (t === null) return '<span class="muted">Objectif non défini</span>';
+  return String(t) + (isTargetOverridden(cert) ? ' <span class="override-badge">ajusté</span>' : '');
+}
+function renderResteAEngagerCell(cert){
+  var v = getResteAEngager(cert);
+  if (v === null) return '<span class="na">Non renseigné</span>';
+  if (v <= 0) return '<span style="color:var(--good);font-weight:700;">Atteint</span>';
+  return '<span style="font-weight:700;">' + v + '</span>';
 }
 
 /* ============ view: DASHBOARD ============ */
@@ -528,19 +644,28 @@ function computeDistribution(mode){
 
 function renderDashboard(){
   var certs = DATA.certifications;
-  var withObj = certs.filter(function(c){ return c.objective; });
-  var quotaTotal = withObj.reduce(function(s,c){ return s+c.objective.quota; },0);
-  var obtenuTotal = withObj.reduce(function(s,c){ return s+c.objective.obtenu; },0);
-  var restantTotal = withObj.reduce(function(s,c){ return s+c.objective.restant; },0);
+  var withTarget = certs.filter(function(c){ return getEffectiveTarget(c) !== null; });
+  var withObtenu = withTarget.filter(function(c){ return getSourceObtenu(c) !== null; });
+  var withEnCours = certs.filter(function(c){ return getSourceEnCours(c) !== null; });
+  var withProjection = withTarget.filter(function(c){ return getProjection(c) !== null; });
+  var quotaTotal = withTarget.reduce(function(s,c){ return s+getEffectiveTarget(c); },0);
+  var obtenuTotal = withObtenu.reduce(function(s,c){ return s+getSourceObtenu(c); },0);
+  var gapTotal = withObtenu.reduce(function(s,c){ return s+getGap(c); },0);
+  var enCoursTotal = withEnCours.reduce(function(s,c){ return s+getSourceEnCours(c); },0);
+  var projectionTotal = withProjection.reduce(function(s,c){ return s+getProjection(c); },0);
+  var resteAEngagerTotal = withProjection.reduce(function(s,c){ return s+getResteAEngager(c); },0);
   var overrideCount = Object.keys(state.certOverrides).length;
   var touchedProviders = DATA.providers.filter(isProviderTouched).length;
 
   var kpis = [
     { label:'Fournisseurs', value: DATA.providers.length, sub: touchedProviders + ' priorisés / ' + DATA.providers.length },
-    { label:'Certifications', value: certs.length, sub: withObj.length + ' avec objectif renseigné' },
-    { label:'Certifiés actuels', value: obtenuTotal, sub: 'sur le périmètre avec objectif' },
-    { label:'Objectif total', value: quotaTotal, sub: '2026-2027' },
-    { label:'Gap restant', value: restantTotal, sub: quotaTotal ? Math.round(100*restantTotal/quotaTotal)+'% du quota' : '—' },
+    { label:'Certifications', value: certs.length, sub: withTarget.length + ' avec objectif défini' },
+    { label:'Certifiés actuels', value: withObtenu.length ? obtenuTotal : 'Non renseigné', sub: 'sur les certifications avec objectif' },
+    { label:'En cours', value: withEnCours.length ? enCoursTotal : 'Non renseigné', sub: 'en cours de certification' },
+    { label:'Projection', value: withProjection.length ? projectionTotal : 'Non renseigné', sub: 'certifiés + en cours' },
+    { label:'Objectif total', value: withTarget.length ? quotaTotal : 'Non renseigné', sub: '2026-2027' },
+    { label:'Gap (obtenus)', value: withObtenu.length ? gapTotal : 'Non renseigné', sub: quotaTotal ? Math.round(100*gapTotal/quotaTotal)+'% du quota' : '—' },
+    { label:'Reste à engager', value: withProjection.length ? resteAEngagerTotal : 'Non renseigné', sub: 'objectif − projection' },
     { label:'Exceptions', value: overrideCount, sub: 'certifications ajustées individuellement' }
   ];
 
@@ -586,18 +711,44 @@ function renderDashboard(){
   }).join('') || '<div class="empty-hint">Aucune exception saisie pour le moment — toutes les certifications héritent de la priorité de leur fournisseur.</div>';
 
   var gapRanking = DATA.providers.map(function(p){ return { provider:p, stats: providerStats(p) }; })
-    .filter(function(r){ return r.stats.withObjectiveCount > 0; })
-    .sort(function(a,b){ return b.stats.restant - a.stats.restant; }).slice(0,6);
-  var maxGap = Math.max.apply(null, gapRanking.map(function(r){return r.stats.restant;}).concat([1]));
+    .filter(function(r){ return r.stats.obtenuKnownCount > 0; })
+    .sort(function(a,b){ return b.stats.gap - a.stats.gap; }).slice(0,6);
+  var maxGap = Math.max.apply(null, gapRanking.map(function(r){return r.stats.gap;}).concat([1]));
   var gapHtml = gapRanking.map(function(r){
-    var pct = Math.round(100*r.stats.restant/maxGap);
+    var pct = Math.round(100*r.stats.gap/maxGap);
     return '<div class="mini-row">'
       + renderProviderBadge(r.provider, 18)
       + '<span class="name">'+escapeHtml(r.provider)+'</span>'
       + '<div class="mini-track"><div class="mini-fill" style="width:'+pct+'%;background:var(--serious);"></div></div>'
-      + '<span class="mini-val">'+r.stats.restant+'</span>'
+      + '<span class="mini-val">'+r.stats.gap+'</span>'
       + '</div>';
   }).join('') || '<div class="empty-hint">Pas de données d\'objectif disponibles.</div>';
+
+  var statusCounts = { atteint:0, bonneVoie:0, accelerer:0, na:0 };
+  withTarget.forEach(function(c){ statusCounts[getCertStatus(c)]++; });
+  var statusHtml = ['atteint','bonneVoie','accelerer','na'].map(function(key){
+    var meta = STATUS_META[key];
+    var color = key==='na' ? 'var(--text-muted)' : meta.color;
+    return '<div class="status-count-tile">'
+      + '<div class="status-count-dot" style="background:'+color+';"></div>'
+      + '<div class="status-count-value">'+statusCounts[key]+'</div>'
+      + '<div class="status-count-label">'+meta.label+'</div>'
+      + '</div>';
+  }).join('');
+
+  var missingData = withTarget.filter(function(c){
+    return getSourceObtenu(c) === null || getSourceEnCours(c) === null;
+  }).sort(function(a,b){ return getEffectivePriority(b)-getEffectivePriority(a); }).slice(0,8);
+  var missingDataHtml = missingData.map(function(c){
+    var missing = [];
+    if (getSourceObtenu(c) === null) missing.push('certifiés');
+    if (getSourceEnCours(c) === null) missing.push('en cours');
+    return '<div class="mini-row">'
+      + renderProviderBadge(c.provider, 18)
+      + '<span class="name">'+escapeHtml(c.name)+' <span class="muted" style="font-style:normal;color:var(--text-muted);">('+escapeHtml(c.provider)+')</span></span>'
+      + '<span class="muted" style="font-style:normal;font-size:11px;">'+missing.join(', ')+' non renseigné(s)</span>'
+      + '</div>';
+  }).join('') || '<div class="empty-hint">Aucune certification avec objectif n\'a de donnée manquante.</div>';
 
   document.getElementById('view-dashboard').innerHTML =
     '<div class="section"><div class="kpi-grid">'+kpiHtml+'</div></div>'
@@ -622,8 +773,19 @@ function renderDashboard(){
     + '</div>'
   + '</div>'
   + '<div class="section card card-pad">'
-    + '<h2 class="section-title">Exceptions individuelles (priorité ≠ priorité du fournisseur)</h2>'
-    + '<div class="mini-list">'+overridesHtml+'</div>'
+    + '<h2 class="section-title">Statuts des objectifs</h2>'
+    + '<p style="font-size:13px;color:var(--text-secondary);margin-top:-4px;">Calculés sur la projection (certifiés + en cours) — restent « Non renseigné » tant que le nombre de personnes en cours de certification n\'est pas disponible.</p>'
+    + '<div class="status-count-row">'+statusHtml+'</div>'
+  + '</div>'
+  + '<div class="section two-col">'
+    + '<div class="card card-pad">'
+      + '<h2 class="section-title">Exceptions individuelles (priorité ≠ priorité du fournisseur)</h2>'
+      + '<div class="mini-list">'+overridesHtml+'</div>'
+    + '</div>'
+    + '<div class="card card-pad">'
+      + '<h2 class="section-title">Certifications avec un objectif mais des données manquantes</h2>'
+      + '<div class="mini-list">'+missingDataHtml+'</div>'
+    + '</div>'
   + '</div>';
 
   var toggle = document.getElementById('dist-toggle');
@@ -645,13 +807,15 @@ function renderComex(){
     if (k === 'provider'){ av=a.provider; bv=b.provider; return dir*av.localeCompare(bv); }
     if (k === 'certCount'){ av=a.stats.certCount; bv=b.stats.certCount; }
     else if (k === 'obtenu'){ av=a.stats.obtenu; bv=b.stats.obtenu; }
-    else if (k === 'quota'){ av=a.stats.quota; bv=b.stats.quota; }
-    else if (k === 'restant'){ av=a.stats.restant; bv=b.stats.restant; }
+    else if (k === 'enCours'){ av=a.stats.enCours; bv=b.stats.enCours; }
+    else if (k === 'projection'){ av=a.stats.projection; bv=b.stats.projection; }
+    else if (k === 'targetDefinedCount'){ av=a.stats.targetDefinedCount; bv=b.stats.targetDefinedCount; }
+    else if (k === 'gap'){ av=a.stats.gap; bv=b.stats.gap; }
     else { av=a.stats.priority; bv=b.stats.priority; }
     return dir*(av-bv);
   });
 
-  var header = ['provider:Fournisseur','certCount:Nb certifications','obtenu:Nb certifiés','quota:Objectif','restant:Gap','priority:Priorité']
+  var header = ['provider:Fournisseur','certCount:Nb certifications','obtenu:Nb certifiés','enCours:En cours','projection:Projection','targetDefinedCount:Objectifs définis','gap:Gap','priority:Priorité']
     .map(function(spec){
       var parts = spec.split(':'); var key=parts[0], label=parts[1];
       var arrow = comexSort.key===key ? (comexSort.dir===1?' ▲':' ▼') : '';
@@ -660,15 +824,16 @@ function renderComex(){
 
   var body = rows.map(function(r){
     var s = r.stats;
-    var hasData = s.withObjectiveCount > 0;
-    var partial = hasData && s.withObjectiveCount < s.certCount;
-    var pickerId = 'comex-'+r.provider.replace(/[^a-z0-9]+/gi,'-');
+    var hasObtenu = s.obtenuKnownCount > 0;
+    var partial = hasObtenu && s.obtenuKnownCount < s.certCount;
     return '<tr>'
       + '<td><button class="link-cell" data-provider="'+escapeHtml(r.provider)+'"><span class="cell-provider">'+renderProviderBadge(r.provider, 20)+escapeHtml(r.provider)+'</span></button></td>'
       + '<td class="num">'+s.certCount+'</td>'
-      + '<td class="num">'+(hasData ? s.obtenu + (partial?' <span class="muted" style="font-size:11px;">('+s.withObjectiveCount+'/'+s.certCount+' renseignées)</span>':'') : '<span class="na">Non renseigné</span>')+'</td>'
-      + '<td class="num">'+(hasData ? s.quota : '<span class="na">N/A</span>')+'</td>'
-      + '<td class="num">'+(hasData ? (s.restant<=0 ? '<span style="color:var(--good);font-weight:700;">Atteint</span>' : s.restant) : '<span class="na">N/A</span>')+'</td>'
+      + '<td class="num">'+(hasObtenu ? s.obtenu + (partial?' <span class="muted" style="font-size:11px;">('+s.obtenuKnownCount+'/'+s.certCount+' renseignées)</span>':'') : '<span class="na">Non renseigné</span>')+'</td>'
+      + '<td class="num">'+(s.enCoursKnownCount ? s.enCours : '<span class="na">Non renseigné</span>')+'</td>'
+      + '<td class="num">'+(s.projectionKnownCount ? s.projection : '<span class="na">Non renseigné</span>')+'</td>'
+      + '<td class="num">'+s.targetDefinedCount+'/'+s.certCount+'</td>'
+      + '<td class="num">'+(hasObtenu ? (s.gap<=0 ? '<span style="color:var(--good);font-weight:700;">Atteint</span>' : s.gap) : '<span class="na">N/A</span>')+'</td>'
       + '<td>'+renderPriorityPicker(s.priority, function(provider){ return function(v){ setProviderPriority(provider, v); }; }(r.provider))+'</td>'
       + '</tr>';
   }).join('');
@@ -706,26 +871,39 @@ function renderProviderPills(){
   }).join('');
 }
 
+var providerViewFilter = 'all'; // 'all' | 'withTarget' | 'missingData'
+
 function renderProvider(){
   if (!selectedProvider) selectedProvider = DATA.providers[0];
   var p = selectedProvider;
   var s = providerStats(p);
   var certs = certsByProvider(p).slice();
 
+  if (providerViewFilter === 'withTarget'){
+    certs = certs.filter(function(c){ return getEffectiveTarget(c) !== null; });
+  } else if (providerViewFilter === 'missingData'){
+    certs = certs.filter(function(c){
+      return getEffectiveTarget(c) !== null && (getSourceObtenu(c) === null || getSourceEnCours(c) === null);
+    });
+  }
+
   providerSort = providerSort || {key:'name',dir:1};
   certs.sort(function(a,b){
     var k = providerSort.key, dir = providerSort.dir;
     if (k==='name') return dir*a.name.localeCompare(b.name);
     if (k==='priority') return dir*(getEffectivePriority(a)-getEffectivePriority(b));
-    if (k==='obtenu') return dir*((a.objective?a.objective.obtenu:-1)-(b.objective?b.objective.obtenu:-1));
-    if (k==='quota') return dir*((a.objective?a.objective.quota:-1)-(b.objective?b.objective.quota:-1));
-    if (k==='restant') return dir*((a.objective?a.objective.restant:-1)-(b.objective?b.objective.restant:-1));
+    if (k==='obtenu') return dir*(fmtSortVal(getSourceObtenu(a))-fmtSortVal(getSourceObtenu(b)));
+    if (k==='enCours') return dir*(fmtSortVal(getSourceEnCours(a))-fmtSortVal(getSourceEnCours(b)));
+    if (k==='projection') return dir*(fmtSortVal(getProjection(a))-fmtSortVal(getProjection(b)));
+    if (k==='target') return dir*(fmtSortVal(getEffectiveTarget(a))-fmtSortVal(getEffectiveTarget(b)));
+    if (k==='reste') return dir*(fmtSortVal(getResteAEngager(a))-fmtSortVal(getResteAEngager(b)));
     return 0;
   });
 
-  var header = ['name:Certification','obtenu:Nb certifiés','quota:Objectif','restant:Gap','priority:Priorité']
+  var header = ['name:Certification','level:Niveau','obtenu:Certifiés','enCours:En cours','projection:Projection','target:Objectif','reste:Reste à engager','priority:Priorité']
     .map(function(spec){
       var parts = spec.split(':'); var key=parts[0], label=parts[1];
+      if (key === 'level') return '<th style="cursor:default;">'+label+'</th>';
       var arrow = providerSort.key===key ? (providerSort.dir===1?' ▲':' ▼') : '';
       return '<th data-key="'+key+'">'+label+arrow+'</th>';
     }).join('');
@@ -736,12 +914,15 @@ function renderProvider(){
     return '<tr>'
       + '<td><button class="link-cell" data-cert="'+c.id+'">'+escapeHtml(c.name)+'</button>'
         + (overridden ? ' <span class="override-badge">ajustée</span>' : '') + '</td>'
-      + '<td>'+ (c.objective ? c.objective.obtenu : '<span class="na">N/A</span>') +'</td>'
-      + '<td>'+ (c.objective ? c.objective.quota : '<span class="na">N/A</span>') +'</td>'
-      + '<td>'+ renderGapCell(c) +'</td>'
+      + '<td>'+ (c.difficulty ? '<span class="diff-badge">'+escapeHtml(c.difficulty)+'</span>' : '<span class="na">N/A</span>') +'</td>'
+      + '<td>'+ (getSourceObtenu(c)===null ? '<span class="na">Non renseigné</span>' : getSourceObtenu(c)) +'</td>'
+      + '<td>'+ renderEnCoursCell(c) +'</td>'
+      + '<td>'+ renderProjectionCell(c) +'</td>'
+      + '<td>'+ renderObjectifCell(c) +'</td>'
+      + '<td>'+ renderResteAEngagerCell(c) +'</td>'
       + '<td>'+ renderPriorityPicker(eff, function(certId){ return function(v){ setCertOverride(certId, v); }; }(c.id)) + '</td>'
       + '</tr>';
-  }).join('');
+  }).join('') || '<tr><td colspan="8"><div class="empty-hint">Aucune certification ne correspond à ce filtre.</div></td></tr>';
 
   document.getElementById('view-provider').innerHTML =
     '<div class="section pill-row">'+renderProviderPills()+'</div>'
@@ -749,7 +930,7 @@ function renderProvider(){
     + '<div class="provider-header-left">'
       + renderProviderBadge(p, 52, '14px')
       + '<div><h2 class="provider-title">'+escapeHtml(p)+'</h2>'
-      + '<div class="provider-meta">'+s.certCount+' certification(s)'+(s.withObjectiveCount?' · '+s.obtenu+'/'+s.quota+' certifiés (objectif 2026-2027)':' · objectifs non renseignés')+'</div></div>'
+      + '<div class="provider-meta">'+s.certCount+' certification(s)'+(s.obtenuKnownCount?' · '+s.obtenu+'/'+s.quota+' certifiés':' · certifiés non renseignés')+' · '+s.targetDefinedCount+' objectif(s) défini(s)</div></div>'
     + '</div>'
     + '<div class="provider-priority-block">'
       + '<div class="label">Priorité du fournisseur</div>'
@@ -758,14 +939,22 @@ function renderProvider(){
   + '</div>'
   + '<div class="section card card-pad">'
     + '<h2 class="section-title">Certifications '+escapeHtml(p)+'</h2>'
-    + '<p style="font-size:13px;color:var(--text-secondary);margin-top:-4px;">Chaque certification hérite de la priorité du fournisseur ('+s.priority+'). Cliquez sur un autre niveau pour créer une exception individuelle.</p>'
+    + '<p style="font-size:13px;color:var(--text-secondary);margin-top:-4px;">Chaque certification hérite de la priorité du fournisseur ('+s.priority+'). Cliquez sur un autre niveau pour créer une exception individuelle, ou sur une certification pour définir un objectif.</p>'
+    + '<div class="segmented" id="provider-view-filter" style="margin-bottom:14px;">'
+      + '<button data-filter="all" class="'+(providerViewFilter==='all'?'active':'')+'">Toutes</button>'
+      + '<button data-filter="withTarget" class="'+(providerViewFilter==='withTarget'?'active':'')+'">Avec objectif défini</button>'
+      + '<button data-filter="missingData" class="'+(providerViewFilter==='missingData'?'active':'')+'">Données manquantes</button>'
+    + '</div>'
     + '<div style="overflow-x:auto;"><table class="data-table"><thead><tr>'+header+'</tr></thead><tbody>'+rows+'</tbody></table></div>'
   + '</div>';
 
   document.querySelectorAll('#view-provider .pill').forEach(function(btn){
     btn.addEventListener('click', function(){ selectedProvider = btn.getAttribute('data-provider'); renderProvider(); });
   });
-  document.querySelectorAll('#view-provider thead th').forEach(function(th){
+  document.getElementById('provider-view-filter').querySelectorAll('button').forEach(function(btn){
+    btn.addEventListener('click', function(){ providerViewFilter = btn.getAttribute('data-filter'); renderProvider(); });
+  });
+  document.querySelectorAll('#view-provider thead th[data-key]').forEach(function(th){
     th.addEventListener('click', function(){
       var key = th.getAttribute('data-key');
       if (providerSort.key === key) providerSort.dir *= -1; else { providerSort.key = key; providerSort.dir = 1; }
@@ -800,17 +989,17 @@ function renderCertification(){
     if (k==='name') return dir*a.name.localeCompare(b.name);
     if (k==='provider') return dir*a.provider.localeCompare(b.provider);
     if (k==='priority') return dir*(getEffectivePriority(a)-getEffectivePriority(b));
-    if (k==='obtenu') return dir*((a.objective?a.objective.obtenu:-1)-(b.objective?b.objective.obtenu:-1));
-    if (k==='quota') return dir*((a.objective?a.objective.quota:-1)-(b.objective?b.objective.quota:-1));
-    if (k==='restant') return dir*((a.objective?a.objective.restant:-1)-(b.objective?b.objective.restant:-1));
+    if (k==='obtenu') return dir*(fmtSortVal(getSourceObtenu(a))-fmtSortVal(getSourceObtenu(b)));
+    if (k==='enCours') return dir*(fmtSortVal(getSourceEnCours(a))-fmtSortVal(getSourceEnCours(b)));
+    if (k==='target') return dir*(fmtSortVal(getEffectiveTarget(a))-fmtSortVal(getEffectiveTarget(b)));
     return 0;
   });
 
-  var header = ['name:Certification','provider:Fournisseur','difficulty:Difficulté','obtenu:Certifiés','restant:Gap','priority:Priorité']
+  var header = ['name:Certification','provider:Fournisseur','difficulty:Difficulté','obtenu:Certifiés','enCours:En cours','target:Objectif','status:Statut','priority:Priorité']
     .map(function(spec){
       var parts = spec.split(':'); var key=parts[0], label=parts[1];
       var arrow = certSort.key===key ? (certSort.dir===1?' ▲':' ▼') : '';
-      var sortable = key !== 'difficulty';
+      var sortable = key !== 'difficulty' && key !== 'status';
       return '<th'+(sortable?' data-key="'+key+'"':' style="cursor:default;"')+'>'+label+(sortable?arrow:'')+'</th>';
     }).join('');
 
@@ -823,10 +1012,12 @@ function renderCertification(){
       + '<td><span class="cell-provider" style="font-weight:600;">'+renderProviderBadge(c.provider, 20)+escapeHtml(c.provider)+'</span></td>'
       + '<td>'+ (c.difficulty ? '<span class="diff-badge">'+escapeHtml(c.difficulty)+'</span>' : '<span class="na">N/A</span>') +'</td>'
       + '<td>'+ renderProgressCell(c) +'</td>'
-      + '<td>'+ renderGapCell(c) +'</td>'
+      + '<td>'+ renderEnCoursCell(c) +'</td>'
+      + '<td>'+ renderObjectifCell(c) +'</td>'
+      + '<td>'+ renderStatusBadge(c) +'</td>'
       + '<td>'+ renderPriorityPicker(eff, function(certId){ return function(v){ setCertOverride(certId, v); }; }(c.id)) + '</td>'
       + '</tr>';
-  }).join('') || '<tr><td colspan="6"><div class="empty-hint">Aucune certification ne correspond aux filtres.</div></td></tr>';
+  }).join('') || '<tr><td colspan="8"><div class="empty-hint">Aucune certification ne correspond aux filtres.</div></td></tr>';
 
   var providerOptions = '<option value="ALL">Tous les fournisseurs</option>' + DATA.providers.map(function(p){
     return '<option value="'+escapeHtml(p)+'"'+(certFilter.provider===p?' selected':'')+'>'+escapeHtml(p)+'</option>';
@@ -876,6 +1067,23 @@ function openCertDrawer(certId){
     + (overridden ? '<button class="btn btn-sm" id="drawer-clear-override">Revenir à la priorité du fournisseur ('+providerPrio+')</button>' : '')
     + '</div>';
 
+  var obtenu = getSourceObtenu(c), enCours = getSourceEnCours(c), projection = getProjection(c);
+  var target = getEffectiveTarget(c), reste = getResteAEngager(c);
+  var targetOverridden = isTargetOverridden(c);
+  var baseTarget = getBaseTarget(c);
+
+  var targetHint = '';
+  if (!FROZEN && baseTarget !== null && (targetOverridden ? state.certTargets[c.id] !== baseTarget : false)){
+    targetHint = '<div class="kv-label" style="margin-top:6px;font-weight:400;font-style:italic;">Valeur source (2026-2027) : '+baseTarget+'</div>';
+  }
+  var targetEditor = FROZEN ? '' :
+    '<div class="target-editor">'
+    + '<input type="number" min="0" step="1" class="target-input" id="target-input" placeholder="Non défini" value="'+(target!==null?target:'')+'">'
+    + '<button class="btn btn-sm" id="target-save-btn">Enregistrer</button>'
+    + (target!==null ? '<button class="btn btn-sm btn-danger-ghost" id="target-clear-btn">Supprimer l\'objectif</button>' : '')
+    + '</div>'
+    + targetHint;
+
   document.getElementById('cert-drawer').innerHTML =
     '<div class="drawer-head">'
       + '<div><div class="drawer-title">'+escapeHtml(c.name)+'</div>'
@@ -885,11 +1093,19 @@ function openCertDrawer(certId){
     + '</div>'
     + '<div class="drawer-body">'
       + '<div class="kv-grid">'
-        + '<div class="kv-box"><div class="kv-label">Certifiés</div><div class="kv-value">'+(c.objective? c.objective.obtenu : 'N/A')+'</div></div>'
-        + '<div class="kv-box"><div class="kv-label">Objectif</div><div class="kv-value">'+(c.objective? c.objective.quota : 'N/A')+'</div></div>'
-        + '<div class="kv-box"><div class="kv-label">Gap</div><div class="kv-value">'+(c.objective? (c.objective.restant<=0?'Atteint':c.objective.restant) : 'N/A')+'</div></div>'
+        + '<div class="kv-box"><div class="kv-label">Certifiés</div><div class="kv-value">'+(obtenu!==null?obtenu:'N/A')+'</div></div>'
+        + '<div class="kv-box"><div class="kv-label">En cours</div><div class="kv-value">'+(enCours!==null?enCours:'N/A')+'</div></div>'
+        + '<div class="kv-box"><div class="kv-label">Projection</div><div class="kv-value">'+(projection!==null?projection:'N/A')+'</div></div>'
+        + '<div class="kv-box"><div class="kv-label">Objectif</div><div class="kv-value">'+(target!==null?target:'N/A')+'</div></div>'
+        + '<div class="kv-box"><div class="kv-label">Reste à engager</div><div class="kv-value">'+(reste!==null?(reste<=0?'Atteint':reste):'N/A')+'</div></div>'
+        + '<div class="kv-box"><div class="kv-label">Statut</div><div class="kv-value" style="font-size:14px;">'+renderStatusBadge(c)+'</div></div>'
       + '</div>'
       + '<div><div class="kv-label" style="margin-bottom:8px;">Description</div><div class="desc-text">'+escapeHtml(c.description || 'Non renseigné')+'</div></div>'
+      + '<div class="kv-label">Coût : <span class="na" style="text-transform:none;font-weight:400;">Non renseigné</span></div>'
+      + '<div>'
+        + '<div class="kv-label" style="margin-bottom:8px;">Objectif de certifiés (optionnel)</div>'
+        + targetEditor
+      + '</div>'
       + '<div>'
         + '<div class="kv-label" style="margin-bottom:8px;">Priorité effective'+(overridden?' <span class="override-badge">ajustée individuellement</span>':' (héritée du fournisseur)')+'</div>'
         + '<div class="override-row">' + renderPriorityPicker(eff, function(v){ setCertOverride(c.id, v); openCertDrawer(c.id); }) + '</div>'
@@ -902,6 +1118,16 @@ function openCertDrawer(certId){
   if (!FROZEN && overridden){
     var clearBtn = document.getElementById('drawer-clear-override');
     if (clearBtn) clearBtn.addEventListener('click', function(){ clearCertOverride(c.id); openCertDrawer(c.id); });
+  }
+  if (!FROZEN){
+    document.getElementById('target-save-btn').addEventListener('click', function(){
+      var raw = document.getElementById('target-input').value;
+      if (raw === '') { clearCertTarget(c.id); }
+      else { setCertTarget(c.id, Math.max(0, Math.round(Number(raw)) || 0)); }
+      openCertDrawer(c.id);
+    });
+    var targetClearBtn = document.getElementById('target-clear-btn');
+    if (targetClearBtn) targetClearBtn.addEventListener('click', function(){ clearCertTarget(c.id); openCertDrawer(c.id); });
   }
   wirePickerHandlers();
 }
@@ -984,7 +1210,13 @@ document.getElementById('export-json-btn').addEventListener('click', function(){
         provider: c.provider,
         difficulty: c.difficulty,
         description: c.description,
-        objective: c.objective,
+        certifiedCount: getSourceObtenu(c),
+        inProgressCount: getSourceEnCours(c),
+        projectedCount: getProjection(c),
+        targetCount: getEffectiveTarget(c),
+        targetOverridden: isTargetOverridden(c),
+        remainingToLaunch: getResteAEngager(c),
+        status: getCertStatus(c),
         priority: getEffectivePriority(c),
         priorityOverridden: getCertOverride(c.id) !== null
       };
@@ -1008,6 +1240,7 @@ document.getElementById('download-copy-btn').addEventListener('click', function(
   var snapshot = {
     providerPriorities: state.providerPriorities,
     certOverrides: state.certOverrides,
+    certTargets: state.certTargets,
     exportedAt: new Date().toISOString()
   };
   var clone = document.documentElement.cloneNode(true);

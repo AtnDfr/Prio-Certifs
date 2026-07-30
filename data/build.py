@@ -148,13 +148,20 @@ def build_data(catalogue, obj_lookup):
             cid = f"{base_id}-{n}"
             n += 1
         seen_ids.add(cid)
+        found = obj_lookup.get((c["provider"], name))
         certifications.append({
             "id": cid,
             "name": name,
             "provider": c["provider"],
             "description": c["desc"],
             "difficulty": c["difficulty"],
-            "objective": obj_lookup.get((c["provider"], name)),
+            "objective": {
+                "quota": found["quota"] if found else None,
+                "obtenu": found["obtenu"] if found else None,
+                # Pas de colonne source pour le nombre de certifications en cours
+                # aujourd'hui : reste null tant qu'une vraie source n'existe pas.
+                "enCours": None,
+            },
         })
     providers = sorted({c["provider"] for c in certifications})
     return {"certifications": certifications, "providers": providers}
@@ -192,7 +199,7 @@ def main():
     obj_lookup = build_objective_lookup(catalogue, objectives)
     data = build_data(catalogue, obj_lookup)
 
-    matched = sum(1 for c in data["certifications"] if c["objective"])
+    matched = sum(1 for c in data["certifications"] if c["objective"]["quota"] is not None)
     expected = len([o for o in objectives if MANUAL_OVERRIDES.get(o["raw"], "") is not None])
     print(f"certifications: {len(data['certifications'])} | avec objectif: {matched} (attendu {expected})")
 

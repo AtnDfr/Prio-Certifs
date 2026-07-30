@@ -8,10 +8,10 @@ Ouvrir **`Priorisation Certifs.html`** dans n'importe quel navigateur (double-cl
 
 Une version identique et éditable est aussi accessible en ligne via GitHub Pages : https://atndfr.github.io/Prio-Certifs/ (pratique pour laisser des collègues tester sans transfert de fichier — chaque visiteur édite dans son propre navigateur, sans synchronisation entre eux ni avec le fichier local).
 
-- **Dashboard** : vue d'ensemble en quelques secondes (KPIs, répartition des priorités 0-10, top priorités, top gaps, exceptions).
-- **Vue COMEX** : priorisation au niveau fournisseur (Provider). C'est le niveau de décision principal.
-- **Vue Provider** : détail des certifications d'un fournisseur, avec héritage automatique de la priorité et possibilité de surcharge individuelle.
-- **Vue Certification** : recherche/filtre sur l'ensemble du catalogue, ajustement fin certification par certification.
+- **Dashboard** : vue d'ensemble en quelques secondes (KPIs, répartition des priorités 0-10, statuts d'objectifs, top priorités, top gaps, exceptions, données manquantes).
+- **BUST** : priorisation au niveau fournisseur (Provider). C'est le niveau de décision principal.
+- **Providers** : détail des certifications d'un fournisseur, avec héritage automatique de la priorité et possibilité de surcharge individuelle.
+- **Certifications** : recherche/filtre sur l'ensemble du catalogue, ajustement fin certification par certification.
 
 ### Modèle de priorisation
 
@@ -19,6 +19,16 @@ Une version identique et éditable est aussi accessible en ligne via GitHub Page
 - Une priorité définie sur un **fournisseur** s'applique par héritage à toutes ses certifications.
 - Une priorité définie individuellement sur une **certification** prime sur celle du fournisseur (exception).
 - Tout est enregistré automatiquement dans le `localStorage` du navigateur — rien n'est envoyé sur un serveur.
+
+### Objectifs quantitatifs (optionnels)
+
+Au-delà de la priorité, chaque certification peut recevoir un **objectif de certifiés** — une décision COMEX éditable et supprimable, indépendante de la priorité, saisissable depuis la fiche détaillée de la certification. La majorité des certifications restent volontairement sans objectif (« Objectif non défini ») ; les quotas 2026-2027 déjà présents dans le fichier source servent de valeur de départ, modifiable comme n'importe quel autre objectif.
+
+Deux natures de données bien distinctes :
+- **Sources** (lecture seule) : nombre de certifiés actuels, et nombre de personnes **en cours de certification** — ce dernier champ est prêt dans le modèle mais n'a aujourd'hui aucune source de données ; il affiche « Non renseigné » partout tant qu'un fichier ou un flux ne l'alimente pas. Aucune valeur n'est inventée.
+- **Décisions COMEX** (éditables, persistées comme les priorités) : l'objectif de certifiés.
+
+Quand les deux valeurs sources sont connues, l'app calcule une **projection** (certifiés + en cours) et un **reste à engager** (objectif − projection). Un statut simple en découle — *Objectif atteint*, *En bonne voie*, *À accélérer*, ou *Non renseigné* tant que la projection ne peut pas être calculée. Comme le nombre de personnes en cours de certification n'est pas encore disponible, ces indicateurs afficheront « Non renseigné » pour la quasi-totalité des certifications jusqu'à ce qu'une vraie source soit branchée — c'est un comportement voulu, pas un bug.
 
 ### Partager une copie de consultation
 
@@ -32,7 +42,7 @@ Le rapprochement entre les deux tableaux (les noms diffèrent d'un onglet à l'a
 
 ### Exporter les priorités pour un agent / traitement automatisé
 
-Le bouton **« Exporter les priorités (JSON) »** télécharge un fichier `prio-certifs-wavestone-export-AAAA-MM-JJ.json` : priorité de chaque fournisseur, et pour chaque certification son nom, fournisseur, difficulté, description, objectif/obtenu/restant, priorité effective (héritée ou surchargée) et un indicateur `priorityOverridden`. C'est un export manuel, déclenché à la demande — pour qu'un agent externe (ex. surveillant un dossier SharePoint) détecte une mise à jour, il suffit de déposer ce fichier dans le dossier suivi et de comparer son champ `exportedAt` à la dernière valeur connue.
+Le bouton **« Exporter les priorités (JSON) »** télécharge un fichier `prio-certifs-wavestone-export-AAAA-MM-JJ.json` : priorité de chaque fournisseur, et pour chaque certification son nom, fournisseur, difficulté, description, `certifiedCount`/`inProgressCount`/`projectedCount` (sources et calculé), `targetCount` (objectif effectif) et `targetOverridden`, `remainingToLaunch`, `status`, ainsi que la priorité effective (héritée ou surchargée) et l'indicateur `priorityOverridden`. C'est un export manuel, déclenché à la demande — pour qu'un agent externe (ex. surveillant un dossier SharePoint) détecte une mise à jour, il suffit de déposer ce fichier dans le dossier suivi et de comparer son champ `exportedAt` à la dernière valeur connue.
 
 ### Logos fournisseurs
 
