@@ -570,7 +570,6 @@ function providerStats(provider){
     obtenuKnownCount: withObtenu.length,
     quota: withObtenu.reduce(function(s,c){ return s + getBaseTarget(c); }, 0),
     obtenu: withObtenu.reduce(function(s,c){ return s + getSourceObtenu(c); }, 0),
-    targetObtenuCount: withTargetObtenu.length,
     gap: withTargetObtenu.reduce(function(s,c){ return s + getGap(c); }, 0),
     enCoursKnownCount: withEnCours.length,
     enCours: withEnCours.reduce(function(s,c){ return s + getSourceEnCours(c); }, 0),
@@ -860,13 +859,11 @@ function renderComex(){
     if (k === 'certCount'){ av=a.stats.certCount; bv=b.stats.certCount; }
     else if (k === 'obtenu'){ av=a.stats.obtenu; bv=b.stats.obtenu; }
     else if (k === 'enCours'){ av=a.stats.enCours; bv=b.stats.enCours; }
-    else if (k === 'targetDefinedCount'){ av=a.stats.targetDefinedCount; bv=b.stats.targetDefinedCount; }
-    else if (k === 'gap'){ av=a.stats.gap; bv=b.stats.gap; }
     else { av=a.stats.priority; bv=b.stats.priority; }
     return dir*(av-bv);
   });
 
-  var header = ['provider:Fournisseur','certCount:Nb certifications','obtenu:Nb certifiés','enCours:En cours','targetDefinedCount:Objectifs définis','gap:Gap','priority:Priorité']
+  var header = ['provider:Fournisseur','certCount:Nb certifications','obtenu:Nb certifiés','enCours:En cours','priority:Priorité']
     .map(function(spec){
       var parts = spec.split(':'); var key=parts[0], label=parts[1];
       var arrow = comexSort.key===key ? (comexSort.dir===1?' ▲':' ▼') : '';
@@ -882,8 +879,6 @@ function renderComex(){
       + '<td class="num">'+s.certCount+'</td>'
       + '<td class="num">'+(hasObtenu ? s.obtenu + (partial?' <span class="muted" style="font-size:11px;">('+s.obtenuKnownCount+'/'+s.certCount+' renseignées)</span>':'') : '<span class="na">Non renseigné</span>')+'</td>'
       + '<td class="num">'+(s.enCoursKnownCount ? s.enCours : '<span class="na">Non renseigné</span>')+'</td>'
-      + '<td class="num">'+s.targetDefinedCount+'/'+s.certCount+'</td>'
-      + '<td class="num">'+(s.targetObtenuCount>0 ? (s.gap<=0 ? '<span style="color:var(--good);font-weight:700;">Atteint</span>' : s.gap) : '<span class="na">N/A</span>')+'</td>'
       + '<td>'+renderPriorityPicker(s.priority, function(provider){ return function(v){ setProviderPriority(provider, v); }; }(r.provider))+'</td>'
       + '</tr>';
   }).join('');
