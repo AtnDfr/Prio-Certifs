@@ -22,13 +22,13 @@ Une version identique et éditable est aussi accessible en ligne via GitHub Page
 
 ### Objectifs quantitatifs (optionnels)
 
-Au-delà de la priorité, chaque certification peut recevoir un **objectif de certifiés** — une décision COMEX éditable et supprimable, indépendante de la priorité, saisissable depuis la fiche détaillée de la certification. La majorité des certifications restent volontairement sans objectif (« Objectif non défini ») ; les quotas 2026-2027 déjà présents dans le fichier source servent de valeur de départ, modifiable comme n'importe quel autre objectif.
+Au-delà de la priorité, chaque certification peut recevoir un **objectif fixé** — une décision COMEX éditable et supprimable, indépendante de la priorité. Éditable directement en ligne dans les vues Certifications et Providers (un simple champ dans la colonne « Objectif fixé »), ou depuis la fiche détaillée. La majorité des certifications restent volontairement sans objectif (« Objectif non défini ») ; les quotas 2026-2027 déjà présents dans le fichier source servent de valeur de départ, modifiable ou supprimable comme n'importe quel autre objectif.
 
 Deux natures de données bien distinctes :
 - **Sources** (lecture seule) : nombre de certifiés actuels, et nombre de personnes **en cours de certification** — ce dernier champ est prêt dans le modèle mais n'a aujourd'hui aucune source de données ; il affiche « Non renseigné » partout tant qu'un fichier ou un flux ne l'alimente pas. Aucune valeur n'est inventée.
-- **Décisions COMEX** (éditables, persistées comme les priorités) : l'objectif de certifiés.
+- **Décisions COMEX** (éditables, persistées comme les priorités) : l'objectif fixé.
 
-Quand les deux valeurs sources sont connues, l'app calcule une **projection** (certifiés + en cours) et un **reste à engager** (objectif − projection). Un statut simple en découle — *Objectif atteint*, *En bonne voie*, *À accélérer*, ou *Non renseigné* tant que la projection ne peut pas être calculée. Comme le nombre de personnes en cours de certification n'est pas encore disponible, ces indicateurs afficheront « Non renseigné » pour la quasi-totalité des certifications jusqu'à ce qu'une vraie source soit branchée — c'est un comportement voulu, pas un bug.
+En interne, l'app calcule aussi une projection (certifiés + en cours) pour dériver le **reste à engager** (objectif − projection) et un **statut** — *Objectif atteint*, *En bonne voie*, *À accélérer*, ou *Non renseigné* tant que la projection ne peut pas être calculée. La projection elle-même n'est pas affichée dans l'interface (calcul trivial, laissé aux utilisateurs si besoin) mais reste disponible dans l'export JSON (`projectedCount`). Comme le nombre de personnes en cours de certification n'est pas encore disponible, le reste à engager et le statut afficheront « Non renseigné » pour la quasi-totalité des certifications jusqu'à ce qu'une vraie source soit branchée — c'est un comportement voulu, pas un bug.
 
 ### Partager une copie de consultation
 

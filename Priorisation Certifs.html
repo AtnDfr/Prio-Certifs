@@ -249,6 +249,11 @@ table.data-table{ width:100%; border-collapse:collapse; font-size:13px; }
   width:100px; padding:8px 10px; border-radius:8px; border:1px solid var(--border-strong);
   background:var(--surface-1); color:var(--text-primary); font-size:13px;
 }
+.target-inline-input{
+  width:92px; padding:6px 8px; border-radius:7px; border:1px solid var(--border-strong);
+  background:var(--surface-1); color:var(--text-primary); font-size:13px;
+}
+.target-inline-input:disabled{ background:var(--surface-2); color:var(--text-muted); cursor:default; }
 
 .provider-badge{
   display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
@@ -525,7 +530,6 @@ function providerStats(provider){
   var certs = certsByProvider(provider);
   var withTarget = certs.filter(function(c){ return getEffectiveTarget(c) !== null; });
   var withObtenu = withTarget.filter(function(c){ return getSourceObtenu(c) !== null; });
-  var withProjection = withTarget.filter(function(c){ return getProjection(c) !== null; });
   var withEnCours = certs.filter(function(c){ return getSourceEnCours(c) !== null; });
   return {
     certCount: certs.length,
@@ -536,9 +540,6 @@ function providerStats(provider){
     gap: withObtenu.reduce(function(s,c){ return s + getGap(c); }, 0),
     enCoursKnownCount: withEnCours.length,
     enCours: withEnCours.reduce(function(s,c){ return s + getSourceEnCours(c); }, 0),
-    projectionKnownCount: withProjection.length,
-    projection: withProjection.reduce(function(s,c){ return s + getProjection(c); }, 0),
-    resteAEngager: withProjection.reduce(function(s,c){ return s + getResteAEngager(c); }, 0),
     priority: getProviderPriority(provider),
     touched: isProviderTouched(provider)
   };
@@ -613,14 +614,31 @@ function renderEnCoursCell(cert){
   var v = getSourceEnCours(cert);
   return v === null ? '<span class="na">Non renseigné</span>' : String(v);
 }
-function renderProjectionCell(cert){
-  var v = getProjection(cert);
-  return v === null ? '<span class="na">Non renseigné</span>' : String(v);
-}
-function renderObjectifCell(cert){
+var targetInputSeq = 0;
+var pendingTargetInputs = [];
+function renderTargetInlineInput(cert){
   var t = getEffectiveTarget(cert);
-  if (t === null) return '<span class="muted">Objectif non défini</span>';
-  return String(t) + (isTargetOverridden(cert) ? ' <span class="override-badge">ajusté</span>' : '');
+  var id = 'ti' + (targetInputSeq++);
+  var html = '<input type="number" min="0" step="1" class="target-inline-input" id="'+id+'" placeholder="Non défini" value="'+(t!==null?t:'')+'"'+(FROZEN?' disabled':'')+'>';
+  if (isTargetOverridden(cert)) html += ' <span class="override-badge">ajusté</span>';
+  if (!FROZEN) pendingTargetInputs.push({ id:id, certId:cert.id });
+  return html;
+}
+function wireTargetInputs(){
+  pendingTargetInputs.forEach(function(item){
+    var el = document.getElementById(item.id);
+    if (!el) return;
+    function commit(){
+      var cert = DATA.certifications.find(function(x){ return x.id === item.certId; });
+      var raw = el.value.trim();
+      var newVal = raw === '' ? null : Math.max(0, Math.round(Number(raw)) || 0);
+      if (newVal === getEffectiveTarget(cert)) return;
+      if (newVal === null) clearCertTarget(item.certId); else setCertTarget(item.certId, newVal);
+    }
+    el.addEventListener('blur', commit);
+    el.addEventListener('keydown', function(e){ if (e.key === 'Enter') el.blur(); });
+  });
+  pendingTargetInputs = [];
 }
 function renderResteAEngagerCell(cert){
   var v = getResteAEngager(cert);
@@ -652,7 +670,6 @@ function renderDashboard(){
   var obtenuTotal = withObtenu.reduce(function(s,c){ return s+getSourceObtenu(c); },0);
   var gapTotal = withObtenu.reduce(function(s,c){ return s+getGap(c); },0);
   var enCoursTotal = withEnCours.reduce(function(s,c){ return s+getSourceEnCours(c); },0);
-  var projectionTotal = withProjection.reduce(function(s,c){ return s+getProjection(c); },0);
   var resteAEngagerTotal = withProjection.reduce(function(s,c){ return s+getResteAEngager(c); },0);
   var overrideCount = Object.keys(state.certOverrides).length;
   var touchedProviders = DATA.providers.filter(isProviderTouched).length;
@@ -662,7 +679,6 @@ function renderDashboard(){
     { label:'Certifications', value: certs.length, sub: withTarget.length + ' avec objectif défini' },
     { label:'Certifiés actuels', value: withObtenu.length ? obtenuTotal : 'Non renseigné', sub: 'sur les certifications avec objectif' },
     { label:'En cours', value: withEnCours.length ? enCoursTotal : 'Non renseigné', sub: 'en cours de certification' },
-    { label:'Projection', value: withProjection.length ? projectionTotal : 'Non renseigné', sub: 'certifiés + en cours' },
     { label:'Objectif total', value: withTarget.length ? quotaTotal : 'Non renseigné', sub: '2026-2027' },
     { label:'Gap (obtenus)', value: withObtenu.length ? gapTotal : 'Non renseigné', sub: quotaTotal ? Math.round(100*gapTotal/quotaTotal)+'% du quota' : '—' },
     { label:'Reste à engager', value: withProjection.length ? resteAEngagerTotal : 'Non renseigné', sub: 'objectif − projection' },
@@ -808,14 +824,13 @@ function renderComex(){
     if (k === 'certCount'){ av=a.stats.certCount; bv=b.stats.certCount; }
     else if (k === 'obtenu'){ av=a.stats.obtenu; bv=b.stats.obtenu; }
     else if (k === 'enCours'){ av=a.stats.enCours; bv=b.stats.enCours; }
-    else if (k === 'projection'){ av=a.stats.projection; bv=b.stats.projection; }
     else if (k === 'targetDefinedCount'){ av=a.stats.targetDefinedCount; bv=b.stats.targetDefinedCount; }
     else if (k === 'gap'){ av=a.stats.gap; bv=b.stats.gap; }
     else { av=a.stats.priority; bv=b.stats.priority; }
     return dir*(av-bv);
   });
 
-  var header = ['provider:Fournisseur','certCount:Nb certifications','obtenu:Nb certifiés','enCours:En cours','projection:Projection','targetDefinedCount:Objectifs définis','gap:Gap','priority:Priorité']
+  var header = ['provider:Fournisseur','certCount:Nb certifications','obtenu:Nb certifiés','enCours:En cours','targetDefinedCount:Objectifs définis','gap:Gap','priority:Priorité']
     .map(function(spec){
       var parts = spec.split(':'); var key=parts[0], label=parts[1];
       var arrow = comexSort.key===key ? (comexSort.dir===1?' ▲':' ▼') : '';
@@ -831,7 +846,6 @@ function renderComex(){
       + '<td class="num">'+s.certCount+'</td>'
       + '<td class="num">'+(hasObtenu ? s.obtenu + (partial?' <span class="muted" style="font-size:11px;">('+s.obtenuKnownCount+'/'+s.certCount+' renseignées)</span>':'') : '<span class="na">Non renseigné</span>')+'</td>'
       + '<td class="num">'+(s.enCoursKnownCount ? s.enCours : '<span class="na">Non renseigné</span>')+'</td>'
-      + '<td class="num">'+(s.projectionKnownCount ? s.projection : '<span class="na">Non renseigné</span>')+'</td>'
       + '<td class="num">'+s.targetDefinedCount+'/'+s.certCount+'</td>'
       + '<td class="num">'+(hasObtenu ? (s.gap<=0 ? '<span style="color:var(--good);font-weight:700;">Atteint</span>' : s.gap) : '<span class="na">N/A</span>')+'</td>'
       + '<td>'+renderPriorityPicker(s.priority, function(provider){ return function(v){ setProviderPriority(provider, v); }; }(r.provider))+'</td>'
@@ -871,7 +885,7 @@ function renderProviderPills(){
   }).join('');
 }
 
-var providerViewFilter = 'all'; // 'all' | 'withTarget' | 'missingData'
+var providerViewFilter = 'all'; // 'all' | 'withTarget'
 
 function renderProvider(){
   if (!selectedProvider) selectedProvider = DATA.providers[0];
@@ -881,10 +895,6 @@ function renderProvider(){
 
   if (providerViewFilter === 'withTarget'){
     certs = certs.filter(function(c){ return getEffectiveTarget(c) !== null; });
-  } else if (providerViewFilter === 'missingData'){
-    certs = certs.filter(function(c){
-      return getEffectiveTarget(c) !== null && (getSourceObtenu(c) === null || getSourceEnCours(c) === null);
-    });
   }
 
   providerSort = providerSort || {key:'name',dir:1};
@@ -894,13 +904,12 @@ function renderProvider(){
     if (k==='priority') return dir*(getEffectivePriority(a)-getEffectivePriority(b));
     if (k==='obtenu') return dir*(fmtSortVal(getSourceObtenu(a))-fmtSortVal(getSourceObtenu(b)));
     if (k==='enCours') return dir*(fmtSortVal(getSourceEnCours(a))-fmtSortVal(getSourceEnCours(b)));
-    if (k==='projection') return dir*(fmtSortVal(getProjection(a))-fmtSortVal(getProjection(b)));
     if (k==='target') return dir*(fmtSortVal(getEffectiveTarget(a))-fmtSortVal(getEffectiveTarget(b)));
     if (k==='reste') return dir*(fmtSortVal(getResteAEngager(a))-fmtSortVal(getResteAEngager(b)));
     return 0;
   });
 
-  var header = ['name:Certification','level:Niveau','obtenu:Certifiés','enCours:En cours','projection:Projection','target:Objectif','reste:Reste à engager','priority:Priorité']
+  var header = ['name:Certification','level:Niveau','obtenu:Certifiés','enCours:En cours','target:Objectif fixé','reste:Reste à engager','priority:Priorité']
     .map(function(spec){
       var parts = spec.split(':'); var key=parts[0], label=parts[1];
       if (key === 'level') return '<th style="cursor:default;">'+label+'</th>';
@@ -915,14 +924,13 @@ function renderProvider(){
       + '<td><button class="link-cell" data-cert="'+c.id+'">'+escapeHtml(c.name)+'</button>'
         + (overridden ? ' <span class="override-badge">ajustée</span>' : '') + '</td>'
       + '<td>'+ (c.difficulty ? '<span class="diff-badge">'+escapeHtml(c.difficulty)+'</span>' : '<span class="na">N/A</span>') +'</td>'
-      + '<td>'+ (getSourceObtenu(c)===null ? '<span class="na">Non renseigné</span>' : getSourceObtenu(c)) +'</td>'
+      + '<td>'+ renderProgressCell(c) +'</td>'
       + '<td>'+ renderEnCoursCell(c) +'</td>'
-      + '<td>'+ renderProjectionCell(c) +'</td>'
-      + '<td>'+ renderObjectifCell(c) +'</td>'
+      + '<td>'+ renderTargetInlineInput(c) +'</td>'
       + '<td>'+ renderResteAEngagerCell(c) +'</td>'
       + '<td>'+ renderPriorityPicker(eff, function(certId){ return function(v){ setCertOverride(certId, v); }; }(c.id)) + '</td>'
       + '</tr>';
-  }).join('') || '<tr><td colspan="8"><div class="empty-hint">Aucune certification ne correspond à ce filtre.</div></td></tr>';
+  }).join('') || '<tr><td colspan="7"><div class="empty-hint">Aucune certification ne correspond à ce filtre.</div></td></tr>';
 
   document.getElementById('view-provider').innerHTML =
     '<div class="section pill-row">'+renderProviderPills()+'</div>'
@@ -943,7 +951,6 @@ function renderProvider(){
     + '<div class="segmented" id="provider-view-filter" style="margin-bottom:14px;">'
       + '<button data-filter="all" class="'+(providerViewFilter==='all'?'active':'')+'">Toutes</button>'
       + '<button data-filter="withTarget" class="'+(providerViewFilter==='withTarget'?'active':'')+'">Avec objectif défini</button>'
-      + '<button data-filter="missingData" class="'+(providerViewFilter==='missingData'?'active':'')+'">Données manquantes</button>'
     + '</div>'
     + '<div style="overflow-x:auto;"><table class="data-table"><thead><tr>'+header+'</tr></thead><tbody>'+rows+'</tbody></table></div>'
   + '</div>';
@@ -965,6 +972,7 @@ function renderProvider(){
     btn.addEventListener('click', function(){ openCertDrawer(btn.getAttribute('data-cert')); });
   });
   wirePickerHandlers();
+  wireTargetInputs();
 }
 
 /* ============ view: CERTIFICATION ============ */
@@ -995,7 +1003,7 @@ function renderCertification(){
     return 0;
   });
 
-  var header = ['name:Certification','provider:Fournisseur','difficulty:Difficulté','obtenu:Certifiés','enCours:En cours','target:Objectif','status:Statut','priority:Priorité']
+  var header = ['name:Certification','provider:Fournisseur','difficulty:Difficulté','obtenu:Certifiés','enCours:En cours','target:Objectif fixé','status:Statut','priority:Priorité']
     .map(function(spec){
       var parts = spec.split(':'); var key=parts[0], label=parts[1];
       var arrow = certSort.key===key ? (certSort.dir===1?' ▲':' ▼') : '';
@@ -1013,7 +1021,7 @@ function renderCertification(){
       + '<td>'+ (c.difficulty ? '<span class="diff-badge">'+escapeHtml(c.difficulty)+'</span>' : '<span class="na">N/A</span>') +'</td>'
       + '<td>'+ renderProgressCell(c) +'</td>'
       + '<td>'+ renderEnCoursCell(c) +'</td>'
-      + '<td>'+ renderObjectifCell(c) +'</td>'
+      + '<td>'+ renderTargetInlineInput(c) +'</td>'
       + '<td>'+ renderStatusBadge(c) +'</td>'
       + '<td>'+ renderPriorityPicker(eff, function(certId){ return function(v){ setCertOverride(certId, v); }; }(c.id)) + '</td>'
       + '</tr>';
@@ -1052,6 +1060,7 @@ function renderCertification(){
     btn.addEventListener('click', function(){ openCertDrawer(btn.getAttribute('data-cert')); });
   });
   wirePickerHandlers();
+  wireTargetInputs();
 }
 
 /* ============ certification detail drawer ============ */
@@ -1067,7 +1076,7 @@ function openCertDrawer(certId){
     + (overridden ? '<button class="btn btn-sm" id="drawer-clear-override">Revenir à la priorité du fournisseur ('+providerPrio+')</button>' : '')
     + '</div>';
 
-  var obtenu = getSourceObtenu(c), enCours = getSourceEnCours(c), projection = getProjection(c);
+  var obtenu = getSourceObtenu(c), enCours = getSourceEnCours(c);
   var target = getEffectiveTarget(c), reste = getResteAEngager(c);
   var targetOverridden = isTargetOverridden(c);
   var baseTarget = getBaseTarget(c);
@@ -1095,15 +1104,14 @@ function openCertDrawer(certId){
       + '<div class="kv-grid">'
         + '<div class="kv-box"><div class="kv-label">Certifiés</div><div class="kv-value">'+(obtenu!==null?obtenu:'N/A')+'</div></div>'
         + '<div class="kv-box"><div class="kv-label">En cours</div><div class="kv-value">'+(enCours!==null?enCours:'N/A')+'</div></div>'
-        + '<div class="kv-box"><div class="kv-label">Projection</div><div class="kv-value">'+(projection!==null?projection:'N/A')+'</div></div>'
-        + '<div class="kv-box"><div class="kv-label">Objectif</div><div class="kv-value">'+(target!==null?target:'N/A')+'</div></div>'
+        + '<div class="kv-box"><div class="kv-label">Objectif fixé</div><div class="kv-value">'+(target!==null?target:'N/A')+'</div></div>'
         + '<div class="kv-box"><div class="kv-label">Reste à engager</div><div class="kv-value">'+(reste!==null?(reste<=0?'Atteint':reste):'N/A')+'</div></div>'
         + '<div class="kv-box"><div class="kv-label">Statut</div><div class="kv-value" style="font-size:14px;">'+renderStatusBadge(c)+'</div></div>'
       + '</div>'
       + '<div><div class="kv-label" style="margin-bottom:8px;">Description</div><div class="desc-text">'+escapeHtml(c.description || 'Non renseigné')+'</div></div>'
       + '<div class="kv-label">Coût : <span class="na" style="text-transform:none;font-weight:400;">Non renseigné</span></div>'
       + '<div>'
-        + '<div class="kv-label" style="margin-bottom:8px;">Objectif de certifiés (optionnel)</div>'
+        + '<div class="kv-label" style="margin-bottom:8px;">Objectif fixé (optionnel)</div>'
         + targetEditor
       + '</div>'
       + '<div>'
