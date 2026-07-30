@@ -438,20 +438,22 @@ function getEffectivePriority(cert){
   return suggested !== null ? suggested : DEFAULT_PRIORITY;
 }
 /* Suggestion automatique (uniquement tant qu'aucune decision manuelle
-   n'existe ni sur la certification ni sur le fournisseur) : plus une
-   certification est proche de son objectif fixe, plus on pousse pour
-   la finir. Ne s'applique que si un objectif ET un nombre de certifies
-   sont connus, sinon on retombe sur DEFAULT_PRIORITY. */
+   n'existe ni sur la certification ni sur le fournisseur) : plus l'objectif
+   fixe par le COMEX est ambitieux par rapport a l'objectif global (quota
+   source, capacite totale disponible pour cette certification), plus on
+   pousse. Ne s'applique que si un objectif global ET un objectif fixe sont
+   connus, sinon on retombe sur DEFAULT_PRIORITY. */
 function getSuggestedPriority(cert){
+  var quota = getBaseTarget(cert);
   var target = getEffectiveTarget(cert);
-  var obtenu = getSourceObtenu(cert);
-  if (target === null || target <= 0 || obtenu === null) return null;
-  var ratio = obtenu / target;
+  if (quota === null || quota <= 0 || target === null) return null;
+  var ratio = target / quota;
   if (ratio > 0.90) return 10;
   if (ratio > 0.75) return 9;
   if (ratio > 0.55) return 8;
   if (ratio >= 0.40) return 7;
-  return 6;
+  if (ratio >= 0.20) return 6;
+  return null; // < 20% : pas de suggestion, reste au defaut (5)
 }
 function isPrioritySuggested(cert){
   return getCertOverride(cert.id) === null && !isProviderTouched(cert.provider) && getSuggestedPriority(cert) !== null;

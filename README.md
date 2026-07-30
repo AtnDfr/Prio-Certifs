@@ -20,12 +20,12 @@ Une version identique et éditable est aussi accessible en ligne via GitHub Page
 - Une priorité définie individuellement sur une **certification** prime sur celle du fournisseur (exception).
 - Tout est enregistré automatiquement dans le `localStorage` du navigateur — rien n'est envoyé sur un serveur.
 
-**Suggestion automatique** : tant qu'aucune décision manuelle n'a été prise (ni sur la certification, ni sur son fournisseur), la priorité par défaut n'est plus figée à 5 pour les certifications qui ont un objectif fixé et un nombre de certifiés connus — elle est calculée selon l'avancement (`certifiés / objectif fixé`), pour pousser en priorité les certifications proches du but :
+**Suggestion automatique** : tant qu'aucune décision manuelle n'a été prise (ni sur la certification, ni sur son fournisseur), la priorité par défaut n'est plus figée à 5 pour les certifications qui ont un objectif global (quota source) et un objectif fixé — elle est calculée selon l'ambition de la cible fixée par rapport à la capacité totale (`objectif fixé / objectif global`), pour pousser en priorité les certifications où le COMEX vise une part importante du disponible :
 
-| Avancement | Priorité suggérée |
+| Objectif fixé / Objectif global | Priorité suggérée |
 |---|---|
-| Aucun objectif défini, ou obtenu inconnu | 5 (défaut inchangé) |
-| ≤ 39 % | 6 |
+| Objectif global ou objectif fixé inconnu, ou ratio < 20 % | 5 (défaut inchangé) |
+| 20 % à 39 % | 6 |
 | 40 % à 55 % | 7 |
 | > 55 % à 75 % | 8 |
 | > 75 % à 90 % | 9 |
