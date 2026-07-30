@@ -20,6 +20,19 @@ Une version identique et éditable est aussi accessible en ligne via GitHub Page
 - Une priorité définie individuellement sur une **certification** prime sur celle du fournisseur (exception).
 - Tout est enregistré automatiquement dans le `localStorage` du navigateur — rien n'est envoyé sur un serveur.
 
+**Suggestion automatique** : tant qu'aucune décision manuelle n'a été prise (ni sur la certification, ni sur son fournisseur), la priorité par défaut n'est plus figée à 5 pour les certifications qui ont un objectif fixé et un nombre de certifiés connus — elle est calculée selon l'avancement (`certifiés / objectif fixé`), pour pousser en priorité les certifications proches du but :
+
+| Avancement | Priorité suggérée |
+|---|---|
+| Aucun objectif défini, ou obtenu inconnu | 5 (défaut inchangé) |
+| ≤ 39 % | 6 |
+| 40 % à 55 % | 7 |
+| > 55 % à 75 % | 8 |
+| > 75 % à 90 % | 9 |
+| > 90 % | 10 |
+
+Un badge **« suggérée »** signale ces valeurs calculées dans les tableaux et la fiche détaillée. Dès qu'une priorité est fixée manuellement (sur la certification ou sur tout le fournisseur), la suggestion automatique ne s'applique plus jamais pour cette certification — la décision humaine est toujours prioritaire.
+
 ### Objectifs quantitatifs (optionnels)
 
 Au-delà de la priorité, chaque certification peut recevoir un **objectif fixé** — une décision COMEX éditable et supprimable, indépendante de la priorité. Éditable directement en ligne dans les vues Certifications et Providers (un simple champ dans la colonne « Objectif fixé »), ou depuis la fiche détaillée. La majorité des certifications restent volontairement sans objectif (« Objectif non défini ») ; les quotas 2026-2027 déjà présents dans le fichier source servent de valeur de départ, modifiable ou supprimable comme n'importe quel autre objectif.

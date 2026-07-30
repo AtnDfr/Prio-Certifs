@@ -231,6 +231,11 @@ table.data-table{ width:100%; border-collapse:collapse; font-size:13px; }
   background: color-mix(in srgb, var(--cat-4) 20%, transparent); color:#8a5a00;
 }
 :root[data-theme="dark"] .override-badge{ color: var(--cat-4); }
+.suggested-badge{
+  font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px;
+  background: color-mix(in srgb, var(--cat-1) 18%, transparent); color:#1a5aa8;
+}
+:root[data-theme="dark"] .suggested-badge{ color: var(--cat-1); }
 .status-badge{
   display:inline-flex; align-items:center; font-size:11px; font-weight:700; padding:4px 9px;
   border-radius:6px; color:#fff; white-space:nowrap;
@@ -427,7 +432,29 @@ function getCertOverride(certId){
 }
 function getEffectivePriority(cert){
   var ov = getCertOverride(cert.id);
-  return ov !== null ? ov : getProviderPriority(cert.provider);
+  if (ov !== null) return ov;
+  if (isProviderTouched(cert.provider)) return getProviderPriority(cert.provider);
+  var suggested = getSuggestedPriority(cert);
+  return suggested !== null ? suggested : DEFAULT_PRIORITY;
+}
+/* Suggestion automatique (uniquement tant qu'aucune decision manuelle
+   n'existe ni sur la certification ni sur le fournisseur) : plus une
+   certification est proche de son objectif fixe, plus on pousse pour
+   la finir. Ne s'applique que si un objectif ET un nombre de certifies
+   sont connus, sinon on retombe sur DEFAULT_PRIORITY. */
+function getSuggestedPriority(cert){
+  var target = getEffectiveTarget(cert);
+  var obtenu = getSourceObtenu(cert);
+  if (target === null || target <= 0 || obtenu === null) return null;
+  var ratio = obtenu / target;
+  if (ratio > 0.90) return 10;
+  if (ratio > 0.75) return 9;
+  if (ratio > 0.55) return 8;
+  if (ratio >= 0.40) return 7;
+  return 6;
+}
+function isPrioritySuggested(cert){
+  return getCertOverride(cert.id) === null && !isProviderTouched(cert.provider) && getSuggestedPriority(cert) !== null;
 }
 function setProviderPriority(provider, value){
   if (FROZEN) return;
@@ -928,7 +955,8 @@ function renderProvider(){
       + '<td>'+ renderEnCoursCell(c) +'</td>'
       + '<td>'+ renderTargetInlineInput(c) +'</td>'
       + '<td>'+ renderResteAEngagerCell(c) +'</td>'
-      + '<td>'+ renderPriorityPicker(eff, function(certId){ return function(v){ setCertOverride(certId, v); }; }(c.id)) + '</td>'
+      + '<td>'+ renderPriorityPicker(eff, function(certId){ return function(v){ setCertOverride(certId, v); }; }(c.id))
+        + (isPrioritySuggested(c) ? ' <span class="suggested-badge">suggérée</span>' : '') + '</td>'
       + '</tr>';
   }).join('') || '<tr><td colspan="7"><div class="empty-hint">Aucune certification ne correspond à ce filtre.</div></td></tr>';
 
@@ -1023,7 +1051,8 @@ function renderCertification(){
       + '<td>'+ renderEnCoursCell(c) +'</td>'
       + '<td>'+ renderTargetInlineInput(c) +'</td>'
       + '<td>'+ renderStatusBadge(c) +'</td>'
-      + '<td>'+ renderPriorityPicker(eff, function(certId){ return function(v){ setCertOverride(certId, v); }; }(c.id)) + '</td>'
+      + '<td>'+ renderPriorityPicker(eff, function(certId){ return function(v){ setCertOverride(certId, v); }; }(c.id))
+        + (isPrioritySuggested(c) ? ' <span class="suggested-badge">suggérée</span>' : '') + '</td>'
       + '</tr>';
   }).join('') || '<tr><td colspan="8"><div class="empty-hint">Aucune certification ne correspond aux filtres.</div></td></tr>';
 
@@ -1115,7 +1144,7 @@ function openCertDrawer(certId){
         + targetEditor
       + '</div>'
       + '<div>'
-        + '<div class="kv-label" style="margin-bottom:8px;">Priorité effective'+(overridden?' <span class="override-badge">ajustée individuellement</span>':' (héritée du fournisseur)')+'</div>'
+        + '<div class="kv-label" style="margin-bottom:8px;">Priorité effective'+(overridden?' <span class="override-badge">ajustée individuellement</span>':(isPrioritySuggested(c)?' <span class="suggested-badge">suggérée selon l\'avancement</span>':' (héritée du fournisseur)'))+'</div>'
         + '<div class="override-row">' + renderPriorityPicker(eff, function(v){ setCertOverride(c.id, v); openCertDrawer(c.id); }) + '</div>'
         + '<div style="margin-top:10px;">'+overrideControls+'</div>'
       + '</div>'
@@ -1226,7 +1255,8 @@ document.getElementById('export-json-btn').addEventListener('click', function(){
         remainingToLaunch: getResteAEngager(c),
         status: getCertStatus(c),
         priority: getEffectivePriority(c),
-        priorityOverridden: getCertOverride(c.id) !== null
+        priorityOverridden: getCertOverride(c.id) !== null,
+        prioritySuggested: isPrioritySuggested(c)
       };
     })
   };
