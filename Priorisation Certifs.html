@@ -555,16 +555,21 @@ function certsByProvider(provider){
 }
 function providerStats(provider){
   var certs = certsByProvider(provider);
+  // Objectif global (quota source) : donnee fixe, independante de l'objectif fixe.
+  var withQuota = certs.filter(function(c){ return getBaseTarget(c) !== null; });
+  var withObtenu = withQuota.filter(function(c){ return getSourceObtenu(c) !== null; });
+  // Objectif fixe (decision COMEX, editable) : sert au gap / reste a engager, pas au ratio "certifies".
   var withTarget = certs.filter(function(c){ return getEffectiveTarget(c) !== null; });
-  var withObtenu = withTarget.filter(function(c){ return getSourceObtenu(c) !== null; });
+  var withTargetObtenu = withTarget.filter(function(c){ return getSourceObtenu(c) !== null; });
   var withEnCours = certs.filter(function(c){ return getSourceEnCours(c) !== null; });
   return {
     certCount: certs.length,
     targetDefinedCount: withTarget.length,
     obtenuKnownCount: withObtenu.length,
-    quota: withObtenu.reduce(function(s,c){ return s + getEffectiveTarget(c); }, 0),
+    quota: withObtenu.reduce(function(s,c){ return s + getBaseTarget(c); }, 0),
     obtenu: withObtenu.reduce(function(s,c){ return s + getSourceObtenu(c); }, 0),
-    gap: withObtenu.reduce(function(s,c){ return s + getGap(c); }, 0),
+    targetObtenuCount: withTargetObtenu.length,
+    gap: withTargetObtenu.reduce(function(s,c){ return s + getGap(c); }, 0),
     enCoursKnownCount: withEnCours.length,
     enCours: withEnCours.reduce(function(s,c){ return s + getSourceEnCours(c); }, 0),
     priority: getProviderPriority(provider),
@@ -619,12 +624,14 @@ function wirePickerHandlers(){
 
 /* ============ cellules objectif / suivi ============ */
 function renderProgressCell(cert){
-  var t = getEffectiveTarget(cert);
-  if (t === null) return '<span class="muted">Objectif non défini</span>';
+  // Objectif global (quota source, ex: "nombre de certifications disponibles") :
+  // donnee fixe, jamais affectee par l'objectif fixe (decision COMEX independante).
+  var t = getBaseTarget(cert);
+  if (t === null) return '<span class="na">Non renseigné</span>';
   var o = getSourceObtenu(cert);
   if (o === null) return '<span class="na">Non renseigné</span>';
   var pct = t > 0 ? Math.min(100, Math.round(100*o/t)) : 0;
-  var gap = getGap(cert);
+  var gap = Math.max(t - o, 0);
   var color = gap<=0 ? 'var(--good)' : (pct >= 60 ? 'var(--accent)' : (pct >= 25 ? 'var(--warning)' : 'var(--serious)'));
   return '<div class="progress-cell">'
     + '<div class="progress-text">' + o + ' / ' + t + ' certifiés</div>'
@@ -874,7 +881,7 @@ function renderComex(){
       + '<td class="num">'+(hasObtenu ? s.obtenu + (partial?' <span class="muted" style="font-size:11px;">('+s.obtenuKnownCount+'/'+s.certCount+' renseignées)</span>':'') : '<span class="na">Non renseigné</span>')+'</td>'
       + '<td class="num">'+(s.enCoursKnownCount ? s.enCours : '<span class="na">Non renseigné</span>')+'</td>'
       + '<td class="num">'+s.targetDefinedCount+'/'+s.certCount+'</td>'
-      + '<td class="num">'+(hasObtenu ? (s.gap<=0 ? '<span style="color:var(--good);font-weight:700;">Atteint</span>' : s.gap) : '<span class="na">N/A</span>')+'</td>'
+      + '<td class="num">'+(s.targetObtenuCount>0 ? (s.gap<=0 ? '<span style="color:var(--good);font-weight:700;">Atteint</span>' : s.gap) : '<span class="na">N/A</span>')+'</td>'
       + '<td>'+renderPriorityPicker(s.priority, function(provider){ return function(v){ setProviderPriority(provider, v); }; }(r.provider))+'</td>'
       + '</tr>';
   }).join('');
