@@ -1,122 +1,86 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from "react";
+import type { ViewName } from "./App.types";
+import { LocalDataRepository } from "./data/LocalDataRepository";
+import { useAppData } from "./data/useAppData";
+import { downloadExportedPriorities } from "./data/exportPriorities";
+import { CertPrioritizationProvider, useCertPrioritization } from "./state/CertPrioritizationContext";
+import { useTheme } from "./ui/useTheme";
+import { Header } from "./components/layout/Header";
+import { Dashboard } from "./components/views/Dashboard";
+import { Bust } from "./components/views/Bust";
+import { Providers } from "./components/views/Providers";
+import { Certifications } from "./components/views/Certifications";
+import { CertDrawer } from "./components/shared/CertDrawer";
 
-function App() {
-  const [count, setCount] = useState(0)
+const repository = new LocalDataRepository();
+
+function AppShell() {
+  const dataState = useAppData(repository);
+  const { state, resetAll } = useCertPrioritization();
+  const { theme, toggle: toggleTheme } = useTheme();
+
+  const [view, setView] = useState<ViewName>("dashboard");
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+  const [openCertId, setOpenCertId] = useState<string | null>(null);
+
+  if (dataState.status === "loading") return <div className="section card card-pad">Chargement…</div>;
+  if (dataState.status === "error") return <div className="section card card-pad">Erreur de chargement des données.</div>;
+
+  const data = dataState.data;
+  const currentProvider = selectedProvider ?? data.providers[0];
+
+  function goToProvider(provider: string) {
+    setSelectedProvider(provider);
+    setView("provider");
+  }
+
+  function handleResetAll() {
+    if (window.confirm("Réinitialiser toutes les priorités et tous les objectifs (providers et exceptions) ? Cette action est irréversible.")) {
+      resetAll();
+    }
+  }
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      <Header
+        activeView={view}
+        onSelectView={setView}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        onResetAll={handleResetAll}
+        onExportJson={() => downloadExportedPriorities(state, data)}
+      />
+      <div className="app-shell">
+        <main>
+          <section className="view active">
+            {view === "dashboard" && <Dashboard data={data} />}
+            {view === "comex" && <Bust data={data} onSelectProvider={goToProvider} />}
+            {view === "provider" && (
+              <Providers
+                data={data}
+                selectedProvider={currentProvider}
+                onSelectProvider={setSelectedProvider}
+                onOpenCert={setOpenCertId}
+              />
+            )}
+            {view === "certification" && <Certifications data={data} onOpenCert={setOpenCertId} />}
+          </section>
+        </main>
+        <footer className="app-footer">
+          <span>Catalogue : {data.certifications.length} certifications · {data.providers.length} fournisseurs</span>
+          <span>MVP interne — données non synchronisées entre utilisateurs</span>
+        </footer>
+      </div>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+      {openCertId && <CertDrawer data={data} certId={openCertId} onClose={() => setOpenCertId(null)} />}
     </>
-  )
+  );
 }
 
-export default App
+export default function App() {
+  return (
+    <CertPrioritizationProvider>
+      <AppShell />
+    </CertPrioritizationProvider>
+  );
+}

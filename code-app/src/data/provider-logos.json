@@ -1,0 +1,19 @@
+{
+  "Anthropic": "anthropic.svg",
+  "AWS": "aws.png",
+  "Azure": "azure.png",
+  "Collibra": "collibra.png",
+  "Databricks": "databricks.svg",
+  "Dataiku": "dataiku.svg",
+  "Google Cloud Platform": "google-cloud-platform.svg",
+  "Hugging Face": "hugging-face.svg",
+  "IBM": "ibm.png",
+  "IEC": "iec.png",
+  "Linux Foundation": "linux-foundation.svg",
+  "Microsoft": "microsoft.png",
+  "Palantir": "palantir.svg",
+  "Salesforce": "salesforce.png",
+  "Scaled Agile": "scaled-agile.png",
+  "Snowflake": "snowflake.svg",
+  "Autre": null
+}
