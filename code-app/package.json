@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:standalone": "vite build --config vite.standalone.config.ts"
   },
   "dependencies": {
     "react": "^19.2.8",
@@ -22,6 +23,7 @@
     "oxlint": "^1.75.0",
     "typescript": "~6.0.2",
     "vite": "^8.2.0",
+    "vite-plugin-singlefile": "^2.3.3",
     "vitest": "^4.1.10"
   }
 }
