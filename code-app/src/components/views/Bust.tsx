@@ -46,7 +46,7 @@ export function Bust({ data, onSelectProvider }: { data: AppData; onSelectProvid
           <thead>
             <tr>
               {COLUMNS.map(({ key, label }) => (
-                <th key={key} className={NUM_KEYS.includes(key) ? "num" : undefined} onClick={() => toggleSort(key)}>
+                <th key={key} data-key={key} className={NUM_KEYS.includes(key) ? "num" : undefined} onClick={() => toggleSort(key)}>
                   {label}{sort.key === key ? (sort.dir === 1 ? " ▲" : " ▼") : ""}
                 </th>
               ))}

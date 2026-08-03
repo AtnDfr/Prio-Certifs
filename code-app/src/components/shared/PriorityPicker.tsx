@@ -15,6 +15,7 @@ export function PriorityPicker({ value, onChange, readonly = false }: Props) {
           <button
             key={n}
             type="button"
+            data-n={n}
             className={"priority-dot" + (active ? " active" : "")}
             disabled={readonly}
             style={active ? { background: seqColor(n), color: seqTextColor(n) } : undefined}

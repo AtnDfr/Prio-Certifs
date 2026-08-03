@@ -101,7 +101,7 @@ export function Certifications({ data, onOpenCert }: { data: AppData; onOpenCert
             <tr>
               {columns.map((col) =>
                 col.sortable ? (
-                  <th key={col.key} onClick={() => toggleSort(col.key as SortKey)}>
+                  <th key={col.key} data-key={col.key} onClick={() => toggleSort(col.key as SortKey)}>
                     {col.label}{sort.key === col.key ? (sort.dir === 1 ? " ▲" : " ▼") : ""}
                   </th>
                 ) : (
