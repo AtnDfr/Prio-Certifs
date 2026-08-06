@@ -2,10 +2,11 @@ import type { AppData } from "../domain/types";
 import type { DataRepository } from "./DataRepository";
 
 /**
- * Squelette pour la phase 2 (etape 9 de la note de cadrage). Volontairement
- * non implemente : la connexion SharePoint/Easy Training ne demarre qu'apres
- * validation de l'equivalence fonctionnelle avec LocalDataRepository, et
- * une fois les schemas de liste et les droits d'acces confirmes.
+ * Squelette pour une eventuelle lecture directe SharePoint/Easy Training
+ * cote client (auth navigateur, etc.). Volontairement non implemente :
+ * l'approche retenue pour l'instant est plus simple — un flux Power
+ * Automate ecrit directement dans public/data.json (cf.
+ * JsonFileDataRepository), sans authentification cote app.
  */
 export class SharePointDataRepository implements DataRepository {
   async getAppData(): Promise<AppData> {

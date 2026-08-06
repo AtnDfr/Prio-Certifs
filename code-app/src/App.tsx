@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ViewName } from "./App.types";
-import { LocalDataRepository } from "./data/LocalDataRepository";
+import { JsonFileDataRepository } from "./data/JsonFileDataRepository";
 import { useAppData } from "./data/useAppData";
 import { downloadExportedPriorities } from "./data/exportPriorities";
 import { CertPrioritizationProvider, useCertPrioritization } from "./state/CertPrioritizationContext";
@@ -12,7 +12,7 @@ import { Providers } from "./components/views/Providers";
 import { Certifications } from "./components/views/Certifications";
 import { CertDrawer } from "./components/shared/CertDrawer";
 
-const repository = new LocalDataRepository();
+const repository = new JsonFileDataRepository();
 
 function AppShell() {
   const dataState = useAppData(repository);
