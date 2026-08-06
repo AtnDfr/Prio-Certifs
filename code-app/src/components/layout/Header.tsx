@@ -22,7 +22,7 @@ export function Header({ activeView, onSelectView, theme, onToggleTheme, onReset
       <div className="topbar-inner">
         <div className="topbar-row">
           <div className="brand">
-            <img className="brand-mark" src="/wavestone-logo.png" alt="Wavestone" />
+            <img className="brand-mark" src={`${import.meta.env.BASE_URL}wavestone-logo.png`} alt="Wavestone" />
             <div className="brand-text">
               <h1>Priorisation des certifications</h1>
               <p>Wavestone — pilotage stratégique par fournisseur</p>

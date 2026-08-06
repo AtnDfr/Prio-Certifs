@@ -1,0 +1,20 @@
+image: node:22-alpine
+
+pages:
+  stage: deploy
+  script:
+    - cd code-app
+    - npm ci
+    - npm run test
+    - npm run build
+    # ../public existe deja au racine du depot (assets sources de l'ancienne
+    # app HTML) : on repart d'un dossier propre pour ne publier que le build
+    # React, sans melanger avec ces fichiers sources.
+    - rm -rf ../public
+    - mkdir -p ../public
+    - cp -r dist/* ../public/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'

@@ -2,7 +2,9 @@ import providerLogos from "../../data/provider-logos.json";
 import { providerColor } from "../../ui/colors";
 
 const LOGOS: Record<string, string | null> = providerLogos;
-const DEFAULT_LOGO = "/logos/default.svg";
+// import.meta.env.BASE_URL respecte le `base` de vite.config.ts (chemin relatif,
+// necessaire quand GitLab Pages sert le site sous un sous-chemin).
+const DEFAULT_LOGO = `${import.meta.env.BASE_URL}logos/default.svg`;
 
 type Props = {
   provider: string;
@@ -13,7 +15,7 @@ type Props = {
 export function ProviderBadge({ provider, size, radius = "999px" }: Props) {
   const filename = LOGOS[provider];
   const hasLogo = Boolean(filename);
-  const src = hasLogo ? `/logos/${filename}` : DEFAULT_LOGO;
+  const src = hasLogo ? `${import.meta.env.BASE_URL}logos/${filename}` : DEFAULT_LOGO;
   const bg = hasLogo ? "#ffffff" : providerColor(provider);
   const pad = Math.round(size * (hasLogo ? 0.16 : 0.24));
 
