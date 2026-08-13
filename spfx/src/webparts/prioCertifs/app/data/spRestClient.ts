@@ -34,7 +34,9 @@ export async function getAllListItems<T>(
 
   while (url) {
     const response: SPHttpClientResponse = await context.spHttpClient.get(url, SPHttpClient.configurations.v1, {
-      headers: { Accept: "application/json;odata=nometadata" },
+      // Empeche explicitement toute reponse mise en cache par le navigateur :
+      // chaque ouverture de l'app doit refleter l'etat courant de la liste.
+      headers: { Accept: "application/json;odata=nometadata", "Cache-Control": "no-cache", Pragma: "no-cache" },
     });
     await assertOk(response, `Lecture de la liste "${listTitle}"`);
     const json = await response.json();
