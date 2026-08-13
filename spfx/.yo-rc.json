@@ -1,0 +1,23 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "whichFolder": "subdir",
+    "solutionName": "prio-certifs",
+    "environment": "spo",
+    "packageManager": "npm",
+    "useGulp": true,
+    "componentType": "webpart",
+    "template": "react",
+    "componentName": "PrioCertifs",
+    "componentDescription": "Priorisation des certifications - COMEX/BU AI",
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "22.22.2",
+    "sdksVersions": {},
+    "version": "1.23.2",
+    "libraryName": "prio-certifs",
+    "libraryId": "4cad623c-a024-4f8d-a28e-060ae18263ca",
+    "solutionShortDescription": "prio-certifs description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false
+  }
+}

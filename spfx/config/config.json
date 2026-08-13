@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+  "version": "2.0",
+  "bundles": {
+    "prio-certifs-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/prioCertifs/PrioCertifsWebPart.js",
+          "manifest": "./src/webparts/prioCertifs/PrioCertifsWebPart.manifest.json"
+        }
+      ]
+    }
+  },
+  "externals": {},
+  "localizedResources": {
+    "PrioCertifsWebPartStrings": "lib/webparts/prioCertifs/loc/{locale}.js"
+  }
+}

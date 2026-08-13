@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "prio-certifs-client-side-solution",
+    "id": "4cad623c-a024-4f8d-a28e-060ae18263ca",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.23.2"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "prio-certifs description"
+      },
+      "longDescription": {
+        "default": "prio-certifs description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "prio-certifs Feature",
+        "description": "The feature that activates elements of the prio-certifs solution.",
+        "id": "084914a4-04ab-44c3-b2f4-4d312e78de38",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/prio-certifs.sppkg"
+  }
+}
