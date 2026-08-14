@@ -55,11 +55,11 @@ si besoin (aucune autre logique à toucher).
 colonne → l'URL contient `Field=<NomInterne>` ; ou via l'API REST :
 `<site>/_api/web/lists/getbytitle('Nom de la liste')/fields?$select=Title,InternalName,TypeAsString`.
 
-### Liste 1 — « Objectifs certifs » (lecture seule)
+### Liste 1 — « Objectifs certifs » (lecture seule) — existe déjà
 
-| Colonne affichée | Nom interne utilisé (hypothèse) | Vérifié ? |
+| Colonne affichée | Nom interne utilisé | Vérifié ? |
 |---|---|---|
-| Titre (nom de la certification, clé) | `Title` | ✅ garanti par la plateforme |
+| Certification (nom de la certification, clé — en fait le "Titre" natif renommé) | `Title` | ✅ confirmé |
 | Provider | `Provider` | ⚠️ à vérifier |
 | Population | `Population` | ⚠️ à vérifier (non exploitée en Phase 1) |
 | Quota | `Quota` | ⚠️ à vérifier |
@@ -67,20 +67,16 @@ colonne → l'URL contient `Field=<NomInterne>` ; ou via l'API REST :
 | EnCours | `EnCours` | ⚠️ à vérifier |
 | Difficulté | `Difficult_x00e9_` | ⚠️ **à vérifier en priorité** (accent → probablement échappé par SharePoint) |
 
-### Liste 2 — « Priorités Certifs » (lecture + écriture)
+### Liste 2 — « Priorités Certifs » (lecture + écriture) — existe déjà
 
 | Colonne affichée | Nom interne utilisé (hypothèse) | Vérifié ? |
 |---|---|---|
-| Certification (clé, même convention que `Titre` ci-dessus) | `Certification` | ⚠️ à vérifier |
+| Certification (clé) | `Certification` | ⚠️ **à vérifier** — pourrait être le "Titre" natif renommé (comme en liste 1) plutôt qu'une colonne à part ; si c'est le cas, remplacer par `Title` dans `spConfig.ts` |
 | Provider | `Provider` | ⚠️ à vérifier |
 | PrioriteProvider | `PrioriteProvider` | ⚠️ à vérifier |
 | Override | `Override` | ⚠️ à vérifier |
 | PrioriteEffective | `PrioriteEffective` | ⚠️ à vérifier |
 | Target | `Target` | ⚠️ à vérifier |
-
-Si cette liste n'existe pas encore avec exactement ces colonnes au moment du
-déploiement, la créer avec ces types : `Certification`/`Provider` en texte,
-les 4 colonnes numériques en nombre (0 décimale), toutes nullable.
 
 ## Limitation connue : objectif fixé (`Target`) — bi-état, pas tri-état
 

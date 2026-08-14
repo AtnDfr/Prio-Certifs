@@ -17,7 +17,9 @@ export const PRIORITIES_LIST_TITLE = "Priorités Certifs";
 
 /** Liste 1 — "Objectifs certifs" (lecture seule, remplie par Power Automate). */
 export const OBJECTIVES_FIELDS = {
-  title: "Title", // colonne native "Titre" -> internal name toujours "Title"
+  // Confirme : la colonne affichee "Certification" est le "Titre" natif
+  // renomme -> internal name "Title" (garanti par la plateforme).
+  title: "Title",
   provider: "Provider",
   population: "Population",
   quota: "Quota",
