@@ -12,7 +12,7 @@
  * "Colonnes SharePoint attendues" pour la methode de verification.
  */
 
-export const OBJECTIVES_LIST_TITLE = "Objectifs certifs";
+export const OBJECTIVES_LIST_TITLE = "Objectifs Certifs";
 export const PRIORITIES_LIST_TITLE = "Priorités Certifs";
 
 /** Liste 1 — "Objectifs certifs" (lecture seule, remplie par Power Automate). */
@@ -32,7 +32,9 @@ export const OBJECTIVES_FIELDS = {
 
 /** Liste 2 — "Priorités Certifs" (lecture + ecriture, contexte utilisateur). */
 export const PRIORITIES_FIELDS = {
-  certification: "Certification",
+  // Confirme (capture d'ecran) : "Certification" est aussi le "Titre" natif
+  // renomme, meme principe que la liste 1 -> internal name "Title".
+  certification: "Title",
   provider: "Provider",
   prioriteProvider: "PrioriteProvider",
   override: "Override",
