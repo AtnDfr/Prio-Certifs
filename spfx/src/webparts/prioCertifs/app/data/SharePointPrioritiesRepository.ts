@@ -3,12 +3,7 @@ import type { AppData, Certification, CertPrioritizationState } from "../domain/
 import { emptyState } from "../domain/types";
 import { getEffectivePriority } from "../domain/priority";
 import type { StateRepository } from "./StateRepository";
-import {
-  createListItem,
-  getAllListItems,
-  getListItemEntityTypeFullName,
-  updateListItem,
-} from "./spRestClient";
+import { createListItem, getAllListItems, updateListItem } from "./spRestClient";
 import { PRIORITIES_FIELDS, PRIORITIES_LIST_TITLE } from "./spConfig";
 import { slugifyCertName } from "./slug";
 
@@ -43,7 +38,6 @@ export class SharePointPrioritiesRepository implements StateRepository {
   private readonly siteUrl: string;
   private itemIdsByCertName = new Map<string, number>();
   private lastSavedRowByCertId = new Map<string, RowSnapshot>();
-  private itemTypeFullName: string | undefined;
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(context: WebPartContext, siteUrl: string = context.pageContext.web.serverRelativeUrl) {
@@ -119,8 +113,6 @@ export class SharePointPrioritiesRepository implements StateRepository {
   }
 
   private async flush(state: CertPrioritizationState, data: AppData): Promise<void> {
-    const itemType = await this.ensureItemType();
-
     await Promise.all(
       data.certifications.map(async (cert) => {
         const row = computeRow(state, cert);
@@ -138,22 +130,15 @@ export class SharePointPrioritiesRepository implements StateRepository {
 
         const existingId = this.itemIdsByCertName.get(cert.name);
         if (existingId) {
-          await updateListItem(this.context, this.siteUrl, PRIORITIES_LIST_TITLE, existingId, itemType, fields);
+          await updateListItem(this.context, this.siteUrl, PRIORITIES_LIST_TITLE, existingId, fields);
         } else {
-          const newId = await createListItem(this.context, this.siteUrl, PRIORITIES_LIST_TITLE, itemType, fields);
+          const newId = await createListItem(this.context, this.siteUrl, PRIORITIES_LIST_TITLE, fields);
           this.itemIdsByCertName.set(cert.name, newId);
         }
 
         this.lastSavedRowByCertId.set(cert.id, row);
       }),
     );
-  }
-
-  private async ensureItemType(): Promise<string> {
-    if (!this.itemTypeFullName) {
-      this.itemTypeFullName = await getListItemEntityTypeFullName(this.context, this.siteUrl, PRIORITIES_LIST_TITLE);
-    }
-    return this.itemTypeFullName;
   }
 }
 

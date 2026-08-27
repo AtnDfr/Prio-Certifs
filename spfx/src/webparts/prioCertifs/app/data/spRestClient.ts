@@ -48,31 +48,37 @@ export async function getAllListItems<T>(
   return items;
 }
 
-/** Cree un item dans la liste et retourne son Id. */
+/**
+ * Cree un item dans la liste et retourne son Id.
+ *
+ * Pas de `__metadata` dans le corps : c'est une syntaxe OData v3 (verbose),
+ * incompatible avec le header `odata-version: 4.0` que SPHttpClient envoie
+ * par defaut en meme temps que `odata=nometadata`. Avec ce format, SharePoint
+ * n'a de toute facon pas besoin qu'on precise le type de l'entite : l'URL de
+ * l'endpoint (la liste cible) suffit a l'identifier.
+ */
 export async function createListItem(
   context: WebPartContext,
   siteUrl: string,
   listTitle: string,
-  itemTypeFullName: string,
   fields: Record<string, unknown>,
 ): Promise<number> {
   const url = `${siteUrl}/_api/web/lists/getbytitle('${encodeURIComponent(listTitle)}')/items`;
   const response = await context.spHttpClient.post(url, SPHttpClient.configurations.v1, {
     headers: ODATA_HEADERS,
-    body: JSON.stringify({ __metadata: { type: itemTypeFullName }, ...fields }),
+    body: JSON.stringify(fields),
   });
   await assertOk(response, `Création d'un item dans "${listTitle}"`);
   const json = await response.json();
   return json.Id ?? json.ID;
 }
 
-/** Met a jour un item existant (MERGE, ne touche que les champs fournis). */
+/** Met a jour un item existant (MERGE, ne touche que les champs fournis). Meme remarque que createListItem sur l'absence de `__metadata`. */
 export async function updateListItem(
   context: WebPartContext,
   siteUrl: string,
   listTitle: string,
   itemId: number,
-  itemTypeFullName: string,
   fields: Record<string, unknown>,
 ): Promise<void> {
   const url = `${siteUrl}/_api/web/lists/getbytitle('${encodeURIComponent(listTitle)}')/items(${itemId})`;
@@ -82,22 +88,7 @@ export async function updateListItem(
       "IF-MATCH": "*",
       "X-HTTP-Method": "MERGE",
     },
-    body: JSON.stringify({ __metadata: { type: itemTypeFullName }, ...fields }),
+    body: JSON.stringify(fields),
   });
   await assertOk(response, `Mise à jour d'un item dans "${listTitle}"`);
-}
-
-/** Nom d'entite OData de la liste (necessaire pour __metadata.type sur create/update). */
-export async function getListItemEntityTypeFullName(
-  context: WebPartContext,
-  siteUrl: string,
-  listTitle: string,
-): Promise<string> {
-  const url = `${siteUrl}/_api/web/lists/getbytitle('${encodeURIComponent(listTitle)}')?$select=ListItemEntityTypeFullName`;
-  const response = await context.spHttpClient.get(url, SPHttpClient.configurations.v1, {
-    headers: { Accept: "application/json;odata=nometadata" },
-  });
-  await assertOk(response, `Lecture des métadonnées de "${listTitle}"`);
-  const json = await response.json();
-  return json.ListItemEntityTypeFullName;
 }

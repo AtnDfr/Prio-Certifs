@@ -3,7 +3,7 @@
   "solution": {
     "name": "prio-certifs-client-side-solution",
     "id": "4cad623c-a024-4f8d-a28e-060ae18263ca",
-    "version": "1.0.1.0",
+    "version": "1.0.2.0",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,
