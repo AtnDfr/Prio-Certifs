@@ -59,4 +59,60 @@ describe("SharePointObjectivesRepository", () => {
     expect(data.certifications[0].id).toMatch(/^[a-z0-9-]+$/);
     expect(data.certifications[0].id).not.toMatch(/\s/);
   });
+
+  it("l'absence de Population n'empeche pas le chargement", async () => {
+    const { context, get } = createMockContext();
+    const row = makeRow();
+    delete (row as Record<string, unknown>).Population;
+    get.mockResolvedValue(jsonResponse(200, { value: [row] }));
+
+    const data = await new SharePointObjectivesRepository(context).getAppData();
+
+    expect(data.certifications).toHaveLength(1);
+  });
+
+  it("suit la pagination SharePoint (odata.nextLink) sans tronquer les resultats", async () => {
+    const { context, get } = createMockContext();
+    const page1 = Array.from({ length: 5000 }, (_, i) => makeRow({ Title: `Certif page1 ${i}` }));
+    const page2 = Array.from({ length: 12 }, (_, i) => makeRow({ Title: `Certif page2 ${i}` }));
+    get
+      .mockResolvedValueOnce(jsonResponse(200, { value: page1, "odata.nextLink": "https://x/next" }))
+      .mockResolvedValueOnce(jsonResponse(200, { value: page2 }));
+
+    const data = await new SharePointObjectivesRepository(context).getAppData();
+
+    expect(get).toHaveBeenCalledTimes(2);
+    expect(data.certifications).toHaveLength(5012);
+  });
+
+  it("deduplique les providers", async () => {
+    const { context, get } = createMockContext();
+    get.mockResolvedValue(
+      jsonResponse(200, { value: [makeRow({ Title: "A" }), makeRow({ Title: "B" }), makeRow({ Title: "C" })] }),
+    );
+
+    const data = await new SharePointObjectivesRepository(context).getAppData();
+
+    expect(data.providers).toEqual(["AWS"]);
+  });
+
+  it("une ligne incomplete (Provider absent) ne fait pas planter le chargement : fournisseur par defaut 'Autre'", async () => {
+    const { context, get } = createMockContext();
+    const row = makeRow();
+    delete (row as Record<string, unknown>).Provider;
+    get.mockResolvedValue(jsonResponse(200, { value: [row] }));
+
+    const data = await new SharePointObjectivesRepository(context).getAppData();
+
+    expect(data.certifications[0].provider).toBe("Autre");
+  });
+
+  it("aucune certification retournee -> AppData vide, pas d'erreur", async () => {
+    const { context, get } = createMockContext();
+    get.mockResolvedValue(jsonResponse(200, { value: [] }));
+
+    const data = await new SharePointObjectivesRepository(context).getAppData();
+
+    expect(data).toEqual({ certifications: [], providers: [] });
+  });
 });

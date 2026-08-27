@@ -33,6 +33,19 @@ describe("PrioCertifsApp — rendu des 4 vues avec des donnees representatives (
     expect(screen.getByText(/Catalogue : 4 certifications · 3 fournisseurs/)).toBeInTheDocument();
   });
 
+  it("n'ecrit rien dans Priorités Certifs a la simple ouverture de l'app (pas de reecriture des 79 lignes)", async () => {
+    const { context, get, post } = createMockContext();
+    get.mockImplementation(mockGetForBothLists());
+
+    render(<PrioCertifsApp context={context} />);
+    await screen.findByText(/Répartition des priorités/);
+
+    // Laisse le temps a un eventuel save() debounce (600ms) de se declencher s'il y en avait un.
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    expect(post).not.toHaveBeenCalled();
+  });
+
   it("affiche BUST/COMEX avec la priorite du provider", async () => {
     const { context, get } = createMockContext();
     get.mockImplementation(mockGetForBothLists());
