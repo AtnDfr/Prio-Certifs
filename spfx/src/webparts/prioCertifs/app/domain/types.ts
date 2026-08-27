@@ -18,7 +18,7 @@ export type AppData = {
   providers: string[];
 };
 
-/** Decisions COMEX, persistees (localStorage aujourd'hui, source gouvernee plus tard). */
+/** Decisions COMEX, persistees dans la liste SharePoint "Priorités Certifs" (cf. data/SharePointPrioritiesRepository.ts). */
 export type CertPrioritizationState = {
   providerPriorities: Record<string, number>;
   certOverrides: Record<string, number>;

@@ -106,6 +106,7 @@ button, input, select, textarea{ font-family: inherit; }
 .mode-banner.frozen{ background: color-mix(in srgb, var(--warning) 16%, transparent); color:#8a5a00; }
 :root[data-theme="dark"] .mode-banner.frozen{ color: var(--warning); }
 @media (prefers-color-scheme:dark){ .mode-banner.frozen{ color: var(--warning); } }
+.mode-banner.error{ background: color-mix(in srgb, var(--serious) 14%, transparent); color: var(--serious); }
 
 .tabs{ display:flex; gap:4px; margin-top:16px; border-bottom:1px solid var(--border-strong); }
 .tab{

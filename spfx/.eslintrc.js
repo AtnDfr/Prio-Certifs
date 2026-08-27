@@ -318,6 +318,11 @@ tsconfigRootDir: __dirname
         '**/test/**/*.ts',
         '**/test/**/*.tsx'
       ],
+      // Les fichiers de test sont exclus de tsconfig.json (non compiles par gulp bundle),
+      // donc le parser TS a besoin d'un projet qui les inclut pour ces fichiers.
+      parserOptions: {
+        project: './tsconfig.jest.json'
+      },
       rules: {}
     }
   ]

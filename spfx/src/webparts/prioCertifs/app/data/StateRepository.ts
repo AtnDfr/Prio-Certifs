@@ -8,4 +8,6 @@ import type { AppData, CertPrioritizationState } from "../domain/types";
 export interface StateRepository {
   load(): Promise<CertPrioritizationState>;
   save(state: CertPrioritizationState, data: AppData): void;
+  /** Notifie l'appelant si une sauvegarde echoue, pour que l'UI ne masque pas l'erreur silencieusement. */
+  onSaveError?(callback: (error: unknown) => void): void;
 }

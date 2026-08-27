@@ -23,7 +23,7 @@ type LoadState =
   | { status: "ready"; data: AppData; initialState: CertPrioritizationState };
 
 function AppShell({ data }: { data: AppData }) {
-  const { state, resetAll } = useCertPrioritization();
+  const { state, saveError, resetAll } = useCertPrioritization();
   const { theme, toggle: toggleTheme } = useTheme();
 
   const [view, setView] = useState<ViewName>("dashboard");
@@ -52,6 +52,7 @@ function AppShell({ data }: { data: AppData }) {
         onToggleTheme={toggleTheme}
         onResetAll={handleResetAll}
         onExportJson={() => downloadExportedPriorities(state, data)}
+        saveError={saveError}
       />
       <div className="app-shell">
         <main>
@@ -108,10 +109,14 @@ export default function PrioCertifsApp({ context }: PrioCertifsAppProps) {
 
   if (loadState.status === "loading") return <div className="section card card-pad">Chargement…</div>;
   if (loadState.status === "error") {
+    const detail = loadState.error instanceof Error ? loadState.error.message : String(loadState.error);
     return (
       <div className="section card card-pad">
-        Erreur de chargement des données SharePoint. Vérifiez que les listes « Objectifs certifs » et
-        « Priorités Certifs » existent sur ce site et que vous y avez accès.
+        <p>
+          Erreur de chargement des données SharePoint. Vérifiez que les listes « Objectifs certifs » et
+          « Priorités Certifs » existent sur ce site et que vous y avez accès.
+        </p>
+        <p style={{ marginTop: 10, fontSize: 12, color: "var(--text-muted)", fontFamily: "monospace" }}>{detail}</p>
       </div>
     );
   }

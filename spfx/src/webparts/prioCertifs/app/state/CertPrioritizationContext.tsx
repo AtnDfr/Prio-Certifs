@@ -14,7 +14,11 @@ type CertPrioritizationActions = {
   resetAll: () => void;
 };
 
-type CertPrioritizationValue = { state: CertPrioritizationState } & CertPrioritizationActions;
+type CertPrioritizationValue = {
+  state: CertPrioritizationState;
+  /** Non-null si la derniere sauvegarde a echoue — l'UI doit l'afficher, jamais l'ignorer. */
+  saveError: string | null;
+} & CertPrioritizationActions;
 
 const CertPrioritizationCtx = createContext<CertPrioritizationValue | undefined>(undefined);
 
@@ -29,8 +33,18 @@ type Props = {
 
 export function CertPrioritizationProvider({ initialState, data, stateRepository, children }: Props) {
   const [state, setState] = useState<CertPrioritizationState>(initialState);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
+    stateRepository.onSaveError?.(() => {
+      setSaveError(
+        "La dernière modification n'a pas pu être enregistrée dans SharePoint. Vérifiez votre connexion et vos droits d'écriture sur la liste « Priorités Certifs », puis réessayez.",
+      );
+    });
+  }, [stateRepository]);
+
+  useEffect(() => {
+    setSaveError(null);
     stateRepository.save(state, data);
   }, [state, data, stateRepository]);
 
@@ -63,8 +77,8 @@ export function CertPrioritizationProvider({ initialState, data, stateRepository
   }, []);
 
   const value = useMemo<CertPrioritizationValue>(
-    () => ({ state, setProviderPriority, setCertOverride, clearCertOverride, setCertTarget, clearCertTarget, resetAll }),
-    [state, setProviderPriority, setCertOverride, clearCertOverride, setCertTarget, clearCertTarget, resetAll],
+    () => ({ state, saveError, setProviderPriority, setCertOverride, clearCertOverride, setCertTarget, clearCertTarget, resetAll }),
+    [state, saveError, setProviderPriority, setCertOverride, clearCertOverride, setCertTarget, clearCertTarget, resetAll],
   );
 
   return <CertPrioritizationCtx.Provider value={value}>{children}</CertPrioritizationCtx.Provider>;

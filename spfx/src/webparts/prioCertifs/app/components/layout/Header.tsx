@@ -16,9 +16,10 @@ type Props = {
   onToggleTheme: () => void;
   onResetAll: () => void;
   onExportJson: () => void;
+  saveError: string | null;
 };
 
-export function Header({ activeView, onSelectView, theme, onToggleTheme, onResetAll, onExportJson }: Props) {
+export function Header({ activeView, onSelectView, theme, onToggleTheme, onResetAll, onExportJson, saveError }: Props) {
   return (
     <div className="topbar">
       <div className="topbar-inner">
@@ -47,7 +48,11 @@ export function Header({ activeView, onSelectView, theme, onToggleTheme, onReset
           </div>
         </div>
         <div id="mode-banner">
-          <div className="mode-banner edit">Mode édition — vos priorités sont enregistrées automatiquement dans SharePoint (liste « Priorités Certifs »).</div>
+          {saveError ? (
+            <div className="mode-banner error">{saveError}</div>
+          ) : (
+            <div className="mode-banner edit">Mode édition — vos priorités sont enregistrées automatiquement dans SharePoint (liste « Priorités Certifs »).</div>
+          )}
         </div>
         <nav className="tabs">
           {TABS.map((tab) => (

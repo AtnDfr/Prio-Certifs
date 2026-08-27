@@ -39,6 +39,7 @@ export class SharePointPrioritiesRepository implements StateRepository {
   private itemIdsByCertName = new Map<string, number>();
   private lastSavedRowByCertId = new Map<string, RowSnapshot>();
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
+  private saveErrorCallback: ((error: unknown) => void) | undefined;
 
   constructor(context: WebPartContext, siteUrl: string = context.pageContext.web.serverRelativeUrl) {
     this.context = context;
@@ -108,8 +109,14 @@ export class SharePointPrioritiesRepository implements StateRepository {
       this.flush(state, data).catch((error) => {
         // eslint-disable-next-line no-console
         console.error("Échec de l'enregistrement des priorités dans SharePoint :", error);
+        this.saveErrorCallback?.(error);
       });
     }, SAVE_DEBOUNCE_MS);
+  }
+
+  /** Cf. StateRepository.onSaveError — l'UI s'en sert pour afficher un message plutot que d'echouer silencieusement. */
+  onSaveError(callback: (error: unknown) => void): void {
+    this.saveErrorCallback = callback;
   }
 
   private async flush(state: CertPrioritizationState, data: AppData): Promise<void> {
